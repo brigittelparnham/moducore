@@ -107,13 +107,13 @@ Proves the external portability model.
 
 Unlocks the external data feeds.
 
-- [ ] `packages/integrations` scaffold: connector interface, runtime fetcher, cache layer
-- [ ] Add `connectors` + `connector_data_cache` tables, run migration
-- [ ] First connector: RSS (simple, no auth needed — good for testing the pattern)
-- [ ] Connector config UI in CMS settings
-- [ ] `useConnector` hook available in any app
-- [ ] Scheduled sync (cron job or queue) — fetch + cache on interval
-- [ ] Second connector: generic REST (user provides URL + headers — covers most simple APIs)
+- [x] `packages/integrations` scaffold: connector interface, runtime fetcher, cache layer
+- [x] Add `connectors` + `connector_data_cache` tables, run migration
+- [x] First connector: RSS (simple, no auth needed — good for testing the pattern)
+- [x] Connector config UI in CMS settings
+- [x] `useConnector` hook available in any app
+- [x] Scheduled sync (cron job or queue) — fetch + cache on interval (15 min, via `setInterval` in `apps/api/src/scheduler.ts`)
+- [x] Second connector: generic REST (user provides URL + headers — covers most simple APIs)
 
 **Done when:** a tenant can configure an RSS feed, and journal entries can display data from it.
 
@@ -149,7 +149,7 @@ Unlocks the external data feeds.
 | API | Hono | 2026-03 | Modern, TS-first |
 | Database | PostgreSQL | 2026-03 | Multi-tenant relational data |
 | ORM | Drizzle | 2026-03 | Close to SQL, great TS types |
-| Auth | better-auth (library) | 2026-03 | Full ownership, no vendor |
+| Auth | Fully custom (crypto.scrypt) | 2026-03 | Full ownership, no vendor lock-in |
 | Embedding | Web Components | 2026-03 | Most portable, works anywhere |
 | Backend | Fully custom | 2026-03 | No vendor lock-in, no ongoing costs |
 | Multi-tenancy | Row-level (tenant_id) | 2026-03 | Simpler than schema-per-tenant |

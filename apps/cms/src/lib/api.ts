@@ -58,6 +58,16 @@ export const api = {
       request<{ token: EmbedToken }>('/embed-tokens', { method: 'POST', body: JSON.stringify(body) }),
     revoke: (id: string) => request<{ ok: boolean }>(`/embed-tokens/${id}`, { method: 'DELETE' }),
   },
+  connectors: {
+    list: () => request<{ connectors: ConnectorRow[] }>('/connectors'),
+    create: (body: { type: string; name: string; config: Record<string, string> }) =>
+      request<{ connector: ConnectorRow }>('/connectors', { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: Partial<{ name: string; config: Record<string, string>; enabled: boolean }>) =>
+      request<{ connector: ConnectorRow }>(`/connectors/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    delete: (id: string) => request<{ ok: boolean }>(`/connectors/${id}`, { method: 'DELETE' }),
+    sync: (id: string) => request<{ ok: boolean }>(`/connectors/${id}/sync`, { method: 'POST' }),
+    getData: (id: string) => request<{ data: unknown; syncedAt: string | null }>(`/connectors/${id}/data`),
+  },
 }
 
 export type AvailableApp = {
@@ -74,5 +84,15 @@ export type EmbedToken = {
   appSlug: string | null
   permissions: { read: boolean; write: boolean }
   expiresAt: string | null
+  createdAt: string
+}
+
+export type ConnectorRow = {
+  id: string
+  type: string
+  name: string
+  config: Record<string, string>
+  enabled: boolean
+  lastSyncedAt: string | null
   createdAt: string
 }

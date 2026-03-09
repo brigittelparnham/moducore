@@ -1,4 +1,6 @@
 // External API connector system
-// Connectors are added here in Phase 7
-
-export type { Connector, ConnectorConfig, ConnectorResult } from './types'
+export type { ConnectorConfig, ConnectorResult, ConnectorAdapter } from './types'
+export { rssConnector } from './connectors/rss'
+export { restConnector } from './connectors/rest'
+export { syncConnector, syncAllConnectors } from './runtime/fetcher'
+export { useConnector } from './hooks/useConnector'

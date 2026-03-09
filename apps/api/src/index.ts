@@ -10,6 +10,8 @@ import { journalRoutes } from './routes/journal'
 import { appsRoutes } from './routes/apps'
 import { embedTokensRoutes } from './routes/embed-tokens'
 import { embedRoutes } from './routes/embed'
+import { connectorsRoutes } from './routes/connectors'
+import { startScheduler } from './scheduler'
 import type { AppVariables } from './types'
 
 const db = getDb()
@@ -34,10 +36,12 @@ app.route('/journal', journalRoutes)
 app.route('/apps', appsRoutes)
 app.route('/embed-tokens', embedTokensRoutes)
 app.route('/embed', embedRoutes)
+app.route('/connectors', connectorsRoutes)
 
 app.get('/', (c) => c.json({ message: 'moducore api', status: 'ok' }))
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 serve({ fetch: app.fetch, port: 3000 }, () => {
   console.log('API running on http://localhost:3000')
+  startScheduler()
 })
