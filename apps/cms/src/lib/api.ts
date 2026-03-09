@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -47,4 +47,16 @@ export const api = {
       request<{ page: Page }>(`/pages/${id}/unpublish`, { method: 'POST' }),
     delete: (id: string) => request<{ ok: boolean }>(`/pages/${id}`, { method: 'DELETE' }),
   },
+  apps: {
+    list: () => request<{ apps: AvailableApp[] }>('/apps'),
+    install: (slug: string) => request<{ tenantApp: object }>(`/apps/${slug}/install`, { method: 'POST' }),
+    uninstall: (slug: string) => request<{ ok: boolean }>(`/apps/${slug}/install`, { method: 'DELETE' }),
+  },
+}
+
+export type AvailableApp = {
+  slug: string
+  name: string
+  description: string | null
+  installed: boolean
 }

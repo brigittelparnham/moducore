@@ -52,7 +52,7 @@ A platform of composable, modular applications. Each app (CMS, journal, etc.) ca
 | API server | Hono | Modern, TypeScript-first, runs anywhere |
 | Database | PostgreSQL | Multi-tenant relational data |
 | ORM | Drizzle | Stays close to SQL, excellent TS types, simple migrations |
-| Auth | better-auth | Auth library (not a service) — you own everything |
+| Auth | Fully custom | Node.js crypto.scrypt for passwords, random session tokens, httpOnly cookies — zero deps |
 | Embeds | Web Components | Most portable — works in Notion, any HTML context |
 | Validation | Zod | Shared between frontend and backend via packages/core |
 
@@ -60,24 +60,38 @@ A platform of composable, modular applications. Each app (CMS, journal, etc.) ca
 
 ## App Composition Model
 
-Secondary apps are **packages first, apps second**.
+Secondary apps follow a **plugin / connected feed** model:
 
-- `packages/journal` contains all journal logic and components
-- `apps/journal` is a thin standalone wrapper around `packages/journal`
-- `apps/cms` imports from `packages/journal` directly — no iframes, no indirection
+- Each secondary app (journal, etc.) is a **standalone authoring environment** — purpose-built for its content type
+- The CMS **connects** to secondary apps and surfaces a read-only feed of their content
+- The CMS **never duplicates** a secondary app's editor UI
+- Authoring always happens in the app itself; the CMS is the hub that aggregates and displays
+
+```
+packages/journal  ──→  apps/journal    (standalone authoring — list, editor, publish)
+                              │
+                              │  shares session cookie (same API, credentials: include)
+                              ▼
+                        apps/api        (single API server, all data)
+                              │
+                              ▼
+                        apps/cms        (read-only connected feed + "Edit in Journal →" links)
+                              │
+packages/journal  ──→  packages/embeds → <journal-widget>  (external embed)
+```
 
 This means:
-- The CMS renders secondary app components natively with shared state and auth
-- Secondary apps are independently runnable for development and standalone use
-- Web component embeds in `packages/embeds` wrap the same package components
+- Secondary apps are independently runnable and usable without the CMS
+- The CMS install flow (via `tenant_apps`) activates a feed connector in the CMS sidebar
+- The CMS shows excerpts, status, tags — but clicking "edit" always sends the user to the secondary app
+- Web component embeds in `packages/embeds` wrap the same `packages/journal` components
 
-```
-packages/journal  ──→  apps/journal    (standalone)
-      │
-      └──────────────→  apps/cms       (hosted inside CMS)
-      │
-      └──────────────→  packages/embeds → <journal-widget> (external embed)
-```
+### Adding a new secondary app
+
+1. Build the app standalone in `apps/<name>` using shared components from `packages/<name>`
+2. Add a feed view in `apps/cms` that reads from the API (read-only, links back to the app)
+3. Add the app slug to the registry in `apps/api/src/routes/apps.ts`
+4. The install toggle in CMS Settings surfaces the feed in the sidebar
 
 ---
 
@@ -145,10 +159,13 @@ Tenant resolution order:
 
 ## Auth Model
 
-Handled by `better-auth` running inside `apps/api`. No external auth service.
+Fully custom implementation inside `apps/api`. No external auth service or library.
 
-- Email + password login
-- Session-based (httpOnly cookies)
+- Email + password login (`crypto.scrypt` for password hashing, timing-safe compare)
+- Session-based — random token stored in DB, httpOnly cookie, 30-day expiry
+- Signup creates user + tenant + owner membership in a single transaction
+- `sessionMiddleware` resolves session on every request, attaches user/tenant/member to context
+- `requireAuth` / `requireRole` middleware guard protected routes
 - Roles per tenant: `owner`, `admin`, `member`
 - Embed tokens: separate token type, scoped to tenant + app + permissions
 

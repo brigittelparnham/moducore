@@ -73,16 +73,18 @@ First real feature. Proves the stack end-to-end.
 
 ## Phase 5 — Journal App
 
-Second app. Proves the multi-app composition model.
+Second app. Proves the plugin/connection model.
 
-- [ ] Add `journal_entries` table, run migration
-- [ ] API routes: CRUD for journal entries (scoped to tenant)
-- [ ] `apps/journal` standalone: entry list, entry editor, publish flow
-- [ ] `packages/journal` extracted: journal components importable as a package
-- [ ] `apps/cms` installs journal: journal section appears inside CMS nav
-- [ ] App registry: `apps` + `tenant_apps` tables, install/uninstall flow in CMS settings
+**Model:** Journal is an independent authoring app. When connected to the CMS, the CMS shows a live read-only feed with links back to the journal app for editing. The CMS never duplicates the journal editor.
 
-**Done when:** journal works standalone AND embedded inside the CMS. A tenant can install/uninstall it.
+- [x] Add `journal_entries` table, run migration
+- [x] API routes: CRUD for journal entries (scoped to tenant) — `GET/POST /journal`, `GET/PATCH/DELETE /journal/:id`, publish/unpublish
+- [x] `apps/journal` standalone: full authoring — entry list, entry editor, publish flow
+- [x] `packages/journal` extracted: `JournalProvider`, `JournalListPage`, `JournalEditorPage` — shared components used by apps/journal
+- [x] App registry: `tenant_apps` table + `GET/POST/DELETE /apps` routes + install/uninstall UI in CMS Settings
+- [x] CMS connected journal feed: read-only feed of entries, "Edit in Journal →" links, "Open Journal →" header
+
+**Done when:** tenant can install journal, see the live feed in CMS, and click through to the journal app to write/edit.
 
 ---
 
@@ -152,3 +154,4 @@ Unlocks the external data feeds.
 | Embedding | Web Components | 2026-03 | Most portable, works anywhere |
 | Backend | Fully custom | 2026-03 | No vendor lock-in, no ongoing costs |
 | Multi-tenancy | Row-level (tenant_id) | 2026-03 | Simpler than schema-per-tenant |
+| App composition | Plugin / connected feed | 2026-03 | Secondary apps author independently; CMS shows read-only feed with links back. CMS never duplicates editor UI. |

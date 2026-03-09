@@ -56,3 +56,18 @@ export const updatePageSchema = z.object({
 
 export type CreatePageInput = z.infer<typeof createPageSchema>
 export type UpdatePageInput = z.infer<typeof updatePageSchema>
+
+export const createJournalEntrySchema = z.object({
+  title: z.string().optional(),
+  content: z.record(z.unknown()).default({}),
+  tags: z.array(z.string()).default([]),
+})
+
+export const updateJournalEntrySchema = z.object({
+  title: z.string().optional(),
+  content: z.record(z.unknown()).optional(),
+  tags: z.array(z.string()).optional(),
+})
+
+export type CreateJournalEntryInput = z.infer<typeof createJournalEntrySchema>
+export type UpdateJournalEntryInput = z.infer<typeof updateJournalEntrySchema>

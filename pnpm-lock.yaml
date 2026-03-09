@@ -72,6 +72,9 @@ importers:
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@moducore/journal':
+        specifier: workspace:^
+        version: link:../../packages/journal
       '@moducore/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -118,6 +121,9 @@ importers:
       react-dom:
         specifier: ^18.3.0
         version: 18.3.1(react@18.3.1)
+      react-router-dom:
+        specifier: ^6.27.0
+        version: 6.30.3(react-dom@18.3.1)(react@18.3.1)
     devDependencies:
       '@types/react':
         specifier: ^18.3.0
