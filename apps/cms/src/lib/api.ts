@@ -11,6 +11,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T
 }
 
+export type Page = {
+  id: string
+  tenantId: string
+  title: string
+  slug: string
+  content: Record<string, unknown>
+  status: 'draft' | 'published'
+  publishedAt: string | null
+  createdBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export const api = {
   auth: {
     signup: (body: object) =>
@@ -19,5 +32,19 @@ export const api = {
       request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
     me: () => request('/auth/me'),
+  },
+  pages: {
+    list: () => request<{ pages: Page[] }>('/pages'),
+    get: (id: string) => request<{ page: Page }>(`/pages/${id}`),
+    create: (body: { title: string; slug: string; content: Record<string, unknown> }) =>
+      request<{ page: Page }>('/pages', { method: 'POST', body: JSON.stringify(body) }),
+    update: (
+      id: string,
+      body: Partial<{ title: string; slug: string; content: Record<string, unknown> }>
+    ) => request<{ page: Page }>(`/pages/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    publish: (id: string) => request<{ page: Page }>(`/pages/${id}/publish`, { method: 'POST' }),
+    unpublish: (id: string) =>
+      request<{ page: Page }>(`/pages/${id}/unpublish`, { method: 'POST' }),
+    delete: (id: string) => request<{ ok: boolean }>(`/pages/${id}`, { method: 'DELETE' }),
   },
 }

@@ -1,5 +1,5 @@
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
 
 export function DashboardPage() {
   const { user, tenant, role, logout } = useAuth()
@@ -26,7 +26,11 @@ export function DashboardPage() {
 
       <hr style={{ margin: '32px 0' }} />
 
-      <p style={{ color: '#666' }}>Dashboard — apps will be installed here in Phase 5.</p>
+      <nav style={{ display: 'flex', gap: 16 }}>
+        <Link to="/pages" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
+          Pages →
+        </Link>
+      </nav>
     </div>
   )
 }

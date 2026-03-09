@@ -105,7 +105,7 @@ export function SignupPage() {
             value={form.tenantSlug}
             onChange={set('tenantSlug')}
             required
-            pattern="[a-z0-9-]+"
+            pattern="[-a-z0-9]+"
             style={inputStyle}
           />
           <small style={{ color: '#666' }}>{form.tenantSlug}.moducore.com</small>

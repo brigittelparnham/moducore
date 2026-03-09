@@ -30,3 +30,29 @@ export const loginSchema = z.object({
 
 export type SignupInput = z.infer<typeof signupSchema>
 export type LoginInput = z.infer<typeof loginSchema>
+
+const slugRegex = /^[a-z0-9-]+$/
+
+export const createPageSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  slug: z
+    .string()
+    .min(1, 'Slug is required')
+    .max(100)
+    .regex(slugRegex, 'Only lowercase letters, numbers, and hyphens'),
+  content: z.record(z.unknown()).default({}),
+})
+
+export const updatePageSchema = z.object({
+  title: z.string().min(1).optional(),
+  slug: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(slugRegex, 'Only lowercase letters, numbers, and hyphens')
+    .optional(),
+  content: z.record(z.unknown()).optional(),
+})
+
+export type CreatePageInput = z.infer<typeof createPageSchema>
+export type UpdatePageInput = z.infer<typeof updatePageSchema>

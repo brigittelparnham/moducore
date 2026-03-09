@@ -27,9 +27,9 @@ Get the repo structure right before writing any application code. This is cheap 
 - [x] Set up PostgreSQL locally (`docker-compose.yml` — requires Docker Desktop to run)
 - [x] Initialize Drizzle in `packages/db` with `drizzle.config.ts`
 - [x] Write schema: `tenants`, `users`, `tenant_members`, `sessions`, `embed_tokens`
-- [ ] Run first migration (`pnpm --filter @moducore/db db:generate && db:migrate` — requires Docker running)
+- [x] Run first migration (`pnpm --filter @moducore/db db:generate && db:migrate`)
 - [x] Create typed query helpers in `packages/db/src/queries/`
-- [ ] `updated_at` handled at query layer (set explicitly on update calls)
+- [x] `updated_at` handled at query layer (set explicitly on update calls)
 
 **Done when:** migrations run cleanly, query helpers return properly typed results.
 
@@ -60,12 +60,12 @@ This is the foundation everything else depends on. Get it right before building 
 
 First real feature. Proves the stack end-to-end.
 
-- [ ] Add `pages` and `media` tables, run migration
-- [ ] API routes: CRUD for pages (scoped to tenant)
-- [ ] CMS frontend: pages list, page editor (start with simple textarea, upgrade to block editor later)
-- [ ] Publish / unpublish a page
-- [ ] Public page rendering: `slug.yourplatform.com/[slug]` renders published page
-- [ ] Shared `packages/ui` components built as needed (layout, buttons, inputs)
+- [x] Add `pages` and `media` tables, migration run
+- [x] API routes: CRUD for pages (scoped to tenant) — `GET/POST /pages`, `GET/PATCH/DELETE /pages/:id`, `POST /pages/:id/publish|unpublish`
+- [x] CMS frontend: pages list, page editor (textarea body, auto-slug from title)
+- [x] Publish / unpublish a page
+- [x] Public page rendering: `GET /public/:tenantSlug/pages/:slug` (API) + `/p/:tenantSlug/:slug` (CMS route)
+- [ ] Shared `packages/ui` components — deferred to Phase 8 (inline styles used for now)
 
 **Done when:** a tenant can create, edit, publish, and view a CMS page.
 
