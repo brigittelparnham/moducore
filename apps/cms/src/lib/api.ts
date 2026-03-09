@@ -52,6 +52,12 @@ export const api = {
     install: (slug: string) => request<{ tenantApp: object }>(`/apps/${slug}/install`, { method: 'POST' }),
     uninstall: (slug: string) => request<{ ok: boolean }>(`/apps/${slug}/install`, { method: 'DELETE' }),
   },
+  embedTokens: {
+    list: () => request<{ tokens: EmbedToken[] }>('/embed-tokens'),
+    create: (body: { name: string; appSlug?: string; write?: boolean; expiresAt?: string }) =>
+      request<{ token: EmbedToken }>('/embed-tokens', { method: 'POST', body: JSON.stringify(body) }),
+    revoke: (id: string) => request<{ ok: boolean }>(`/embed-tokens/${id}`, { method: 'DELETE' }),
+  },
 }
 
 export type AvailableApp = {
@@ -59,4 +65,14 @@ export type AvailableApp = {
   name: string
   description: string | null
   installed: boolean
+}
+
+export type EmbedToken = {
+  id: string
+  name: string
+  token: string
+  appSlug: string | null
+  permissions: { read: boolean; write: boolean }
+  expiresAt: string | null
+  createdAt: string
 }

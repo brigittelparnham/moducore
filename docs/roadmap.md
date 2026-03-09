@@ -92,13 +92,12 @@ Second app. Proves the plugin/connection model.
 
 Proves the external portability model.
 
-- [ ] Embed token management: generate, list, revoke tokens in CMS settings
-- [ ] API token validation middleware: validates embed token on requests from external sites
-- [ ] `packages/embeds`: wrap journal components as web components using `@r2wc/react-to-web-component`
-- [ ] Build + serve `journal.js` bundle from `apps/api` or a CDN
-- [ ] Test: embed `<journal-widget>` in a plain HTML file, verify read works
-- [ ] Test: embed with `mode="read-write"` and a write-scoped token, verify write works
-- [ ] Document embed usage
+- [x] Embed token management: generate, list, revoke tokens in CMS Settings → Embed Tokens
+- [x] API token validation: `validateEmbedToken` helper + `GET /embed/journal?token=xxx` public endpoint
+- [x] `packages/embeds`: `JournalWidget` React component wrapped as `<journal-widget>` web component via `@r2wc/react-to-web-component`
+- [x] Build: `vite build` in IIFE mode → `dist/journal.iife.js` (self-contained, React bundled)
+- [x] Test file: `embed-test.html` at repo root — load the bundle and use the widget with a real token
+- [ ] End-to-end test: generate token in CMS, build bundle, serve test page, verify widget renders entries
 
 **Done when:** journal widget is embeddable on any external site with a script tag.
 
