@@ -1,5 +1,11 @@
 import { Hono } from 'hono'
-import { validateEmbedToken, getJournalEntriesByTenant, getJournalEntryById } from '@moducore/db'
+import {
+  validateEmbedToken,
+  getJournalEntriesByTenant,
+  getJournalEntryById,
+  getPagesByTenant,
+  getPublishedPageBySlug,
+} from '@moducore/db'
 import { getDb } from '../lib/db'
 import type { AppVariables } from '../types'
 
@@ -63,4 +69,49 @@ embedRoutes.get('/journal/:id', async (c) => {
   }
 
   return c.json({ entry })
+})
+
+// GET /embed/pages?token=xxx
+// Returns all published CMS pages for the tenant
+embedRoutes.get('/pages', async (c) => {
+  const db = getDb()
+  const token = c.req.query('token')
+
+  if (!token) {
+    return c.json({ error: 'token is required' }, 401)
+  }
+
+  const embedToken = await validateEmbedToken(db, token)
+  if (!embedToken) {
+    return c.json({ error: 'Invalid or expired token' }, 401)
+  }
+
+  const all = await getPagesByTenant(db, embedToken.tenantId)
+  const pages = all.filter((p) => p.status === 'published')
+
+  return c.json({ pages })
+})
+
+// GET /embed/pages/:slug?token=xxx
+// Returns a single published CMS page by slug
+embedRoutes.get('/pages/:slug', async (c) => {
+  const db = getDb()
+  const token = c.req.query('token')
+  const slug = c.req.param('slug')
+
+  if (!token) {
+    return c.json({ error: 'token is required' }, 401)
+  }
+
+  const embedToken = await validateEmbedToken(db, token)
+  if (!embedToken) {
+    return c.json({ error: 'Invalid or expired token' }, 401)
+  }
+
+  const page = await getPublishedPageBySlug(db, embedToken.tenantId, slug)
+  if (!page) {
+    return c.json({ error: 'Not found' }, 404)
+  }
+
+  return c.json({ page })
 })

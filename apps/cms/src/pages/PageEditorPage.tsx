@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Page } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { RichTextEditor } from '@moducore/ui'
 
 function slugify(text: string) {
   return text
@@ -35,7 +36,8 @@ export function PageEditorPage() {
         setPage(p)
         setTitle(p.title)
         setSlug(p.slug)
-        setBody((p.content as { text?: string }).text ?? '')
+        const c = p.content as { html?: string; text?: string }
+        setBody(c.html ?? (c.text ? `<p>${c.text.replace(/\n/g, '</p><p>')}</p>` : ''))
         setSlugTouched(true)
       })
       .catch((e) => setError(e.message))
@@ -53,7 +55,7 @@ export function PageEditorPage() {
     setIsSaving(true)
     setError('')
     try {
-      const content = { text: body }
+      const content = { html: body }
       if (isNew) {
         const data = await api.pages.create({ title, slug, content })
         navigate(`/pages/${data.page.id}`, { replace: true })
@@ -201,23 +203,12 @@ export function PageEditorPage() {
         )}
       </div>
 
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
+      <RichTextEditor
+        key={id}
+        initialContent={body}
+        onChange={setBody}
         placeholder="Write your page content here…"
-        style={{
-          width: '100%',
-          minHeight: 400,
-          fontSize: 15,
-          lineHeight: 1.6,
-          border: '1px solid #eee',
-          borderRadius: 6,
-          padding: 16,
-          resize: 'vertical',
-          outline: 'none',
-          boxSizing: 'border-box',
-          fontFamily: 'inherit',
-        }}
+        minHeight={400}
       />
     </div>
   )

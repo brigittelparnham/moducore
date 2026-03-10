@@ -7,7 +7,7 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'ModucoreEmbeds',
-      fileName: 'journal',
+      fileName: 'moducore',
       formats: ['iife'],
     },
     // Bundle everything — React is included so the embed is self-contained

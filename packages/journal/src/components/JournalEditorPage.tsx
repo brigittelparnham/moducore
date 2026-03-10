@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useJournal } from '../context'
 import { createJournalApi } from '../api'
 import type { JournalEntry } from '../types'
+import { RichTextEditor } from '@moducore/ui'
 
 type Props = {
   entryId: string | null  // null = new entry
@@ -29,7 +30,8 @@ export function JournalEditorPage({ entryId, onBack, onCreated }: Props) {
         const e = data.entry
         setEntry(e)
         setTitle(e.title ?? '')
-        setBody((e.content as { text?: string }).text ?? '')
+        const c = e.content as { html?: string; text?: string }
+        setBody(c.html ?? (c.text ? `<p>${c.text.replace(/\n/g, '</p><p>')}</p>` : ''))
         setTags(e.tags.join(', '))
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
@@ -43,7 +45,7 @@ export function JournalEditorPage({ entryId, onBack, onCreated }: Props) {
     setIsSaving(true)
     setError('')
     try {
-      const content = { text: body }
+      const content = { html: body }
       if (isNew) {
         const data = await api.create({ title: title || undefined, content, tags: parsedTags })
         setEntry(data.entry)
@@ -154,15 +156,12 @@ export function JournalEditorPage({ entryId, onBack, onCreated }: Props) {
         }}
       />
 
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
+      <RichTextEditor
+        key={entryId ?? 'new'}
+        initialContent={body}
+        onChange={setBody}
         placeholder="Write your entry…"
-        style={{
-          width: '100%', minHeight: 400, fontSize: 15, lineHeight: 1.7,
-          border: '1px solid #eee', borderRadius: 6, padding: 16,
-          resize: 'vertical', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-        }}
+        minHeight={400}
       />
     </div>
   )

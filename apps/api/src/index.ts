@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { getDb } from './lib/db'
@@ -11,6 +12,7 @@ import { appsRoutes } from './routes/apps'
 import { embedTokensRoutes } from './routes/embed-tokens'
 import { embedRoutes } from './routes/embed'
 import { connectorsRoutes } from './routes/connectors'
+import { mediaRoutes } from './routes/media'
 import { startScheduler } from './scheduler'
 import type { AppVariables } from './types'
 
@@ -37,6 +39,10 @@ app.route('/apps', appsRoutes)
 app.route('/embed-tokens', embedTokensRoutes)
 app.route('/embed', embedRoutes)
 app.route('/connectors', connectorsRoutes)
+app.route('/media', mediaRoutes)
+
+// Serve uploaded files — accessible by CMS, journal, and external embeds
+app.use('/uploads/*', serveStatic({ root: './' }))
 
 app.get('/', (c) => c.json({ message: 'moducore api', status: 'ok' }))
 app.get('/health', (c) => c.json({ status: 'ok' }))

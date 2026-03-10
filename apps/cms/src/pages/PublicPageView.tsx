@@ -7,7 +7,7 @@ type PageData = {
   page: {
     title: string
     slug: string
-    content: { text?: string }
+    content: { html?: string; text?: string }
     publishedAt: string
   }
   tenant: { name: string; slug: string }
@@ -48,9 +48,16 @@ export function PublicPageView() {
     <div style={{ maxWidth: 700, margin: '80px auto', padding: '0 16px' }}>
       <p style={{ fontSize: 13, color: '#888', marginBottom: 8 }}>{data.tenant.name}</p>
       <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 24 }}>{data.page.title}</h1>
-      <div style={{ fontSize: 16, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#333' }}>
-        {data.page.content.text ?? ''}
-      </div>
+      {data.page.content.html ? (
+        <div
+          style={{ fontSize: 16, lineHeight: 1.7, color: '#333' }}
+          dangerouslySetInnerHTML={{ __html: data.page.content.html }}
+        />
+      ) : (
+        <div style={{ fontSize: 16, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#333' }}>
+          {data.page.content.text ?? ''}
+        </div>
+      )}
     </div>
   )
 }

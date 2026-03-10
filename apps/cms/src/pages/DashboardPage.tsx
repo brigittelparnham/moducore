@@ -44,6 +44,9 @@ export function DashboardPage() {
             Journal →
           </Link>
         )}
+        <Link to="/media" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
+          Media →
+        </Link>
         <Link to="/settings" style={{ fontWeight: 600, textDecoration: 'none', color: '#666' }}>
           Settings
         </Link>

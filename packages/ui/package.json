@@ -10,6 +10,12 @@
     "lint": "eslint src",
     "build": "tsc --noEmit"
   },
+  "dependencies": {
+    "@tiptap/extension-image": "^2.10.4",
+    "@tiptap/extension-placeholder": "^2.10.4",
+    "@tiptap/react": "^2.10.4",
+    "@tiptap/starter-kit": "^2.10.4"
+  },
   "peerDependencies": {
     "react": "^18.3.0",
     "react-dom": "^18.3.0"

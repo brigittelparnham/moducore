@@ -11,6 +11,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T
 }
 
+// Multipart upload — browser sets Content-Type with boundary automatically
+async function upload<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+  return data as T
+}
+
 export type Page = {
   id: string
   tenantId: string
@@ -68,6 +80,15 @@ export const api = {
     sync: (id: string) => request<{ ok: boolean }>(`/connectors/${id}/sync`, { method: 'POST' }),
     getData: (id: string) => request<{ data: unknown; syncedAt: string | null }>(`/connectors/${id}/data`),
   },
+  media: {
+    list: () => request<{ media: MediaItem[] }>('/media'),
+    upload: (file: File) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return upload<{ media: MediaItem }>('/media', fd)
+    },
+    delete: (id: string) => request<{ ok: boolean }>(`/media/${id}`, { method: 'DELETE' }),
+  },
 }
 
 export type AvailableApp = {
@@ -95,4 +116,16 @@ export type ConnectorRow = {
   enabled: boolean
   lastSyncedAt: string | null
   createdAt: string
+}
+
+export type MediaItem = {
+  id: string
+  tenantId: string
+  filename: string
+  url: string
+  mimeType: string
+  sizeBytes: number
+  uploadedBy: string | null
+  createdAt: string
+  deletedAt: string | null
 }

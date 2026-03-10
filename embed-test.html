@@ -3,66 +3,64 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Journal Embed Test</title>
+    <title>Moducore Embed Test</title>
     <style>
-      body {
-        font-family: system-ui, sans-serif;
-        max-width: 700px;
-        margin: 60px auto;
-        padding: 0 20px;
-      }
-      h1 {
-        font-size: 20px;
-        margin-bottom: 4px;
-      }
-      p {
-        color: #666;
-        font-size: 14px;
-      }
-      .embed-box {
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 24px;
-        margin-top: 24px;
-      }
+      body { font-family: system-ui, sans-serif; max-width: 700px; margin: 60px auto; padding: 0 20px; }
+      h1 { font-size: 20px; margin-bottom: 4px; }
+      p.lead { color: #666; font-size: 14px; margin-bottom: 32px; }
+      .embed-box { border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-top: 24px; }
+      .embed-box h2 { font-size: 14px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 16px; }
     </style>
   </head>
   <body>
-    <h1>Journal Embed Test</h1>
-    <p>
-      This page simulates an external site embedding a moducore journal feed. Replace
-      <code>YOUR_TOKEN_HERE</code> with a token from Settings → Embed Tokens.
+    <h1>Moducore Embed Test</h1>
+    <p class="lead">
+      Simulates an external site using moducore embeds. Replace
+      <code>YOUR_TOKEN_HERE</code> and <code>YOUR_PAGE_SLUG</code> with real values from your CMS.
     </p>
 
-    <div class="embed-box">
-      <h2 style="font-size: 16px; margin: 0 0 16px">My Journal</h2>
-      <!--
-      1. Build the embed bundle: pnpm --filter @moducore/embeds build
-      2. Copy packages/embeds/dist/journal.iife.js somewhere servable (or use a local server)
-      3. Replace YOUR_TOKEN_HERE with a real token from the CMS Settings page
+    <!--
+      Setup:
+      1. Start the API: pnpm dev (from repo root)
+      2. Log into the CMS (http://localhost:3001)
+      3. Settings → Embed Tokens → Create Token → copy the token
+      4. Build: PATH="/opt/homebrew/bin:/usr/bin:/bin:$PATH" pnpm --filter @moducore/embeds build
+      5. Replace YOUR_TOKEN_HERE and YOUR_PAGE_SLUG below
+      6. Serve this directory (e.g. npx serve .) — not file://
     -->
-      <script src="./packages/embeds/dist/journal.iife.js"></script>
+    <script src="./packages/embeds/dist/moducore.iife.js"></script>
+
+    <div class="embed-box">
+      <h2>Journal feed</h2>
       <journal-widget token="YOUR_TOKEN_HERE" api-url="http://localhost:3000"></journal-widget>
     </div>
 
+    <div class="embed-box">
+      <h2>Single journal entry</h2>
+      <!-- Replace ENTRY_ID with an actual journal entry ID -->
+      <journal-entry token="YOUR_TOKEN_HERE" entry-id="ENTRY_ID" api-url="http://localhost:3000"></journal-entry>
+    </div>
+
+    <div class="embed-box">
+      <h2>Single CMS page</h2>
+      <cms-page token="YOUR_TOKEN_HERE" slug="YOUR_PAGE_SLUG" api-url="http://localhost:3000"></cms-page>
+    </div>
+
+    <div class="embed-box">
+      <h2>All published CMS pages</h2>
+      <cms-pages token="YOUR_TOKEN_HERE" api-url="http://localhost:3000"></cms-pages>
+    </div>
+
     <details style="margin-top: 32px">
-      <summary style="cursor: pointer; font-size: 13px; color: #888">How to test this</summary>
+      <summary style="cursor: pointer; font-size: 13px; color: #888">How to test</summary>
       <ol style="font-size: 13px; color: #555; line-height: 1.8">
-        <li>Start the API: <code>pnpm dev</code> (from repo root)</li>
-        <li>Log into the CMS (http://localhost:3001)</li>
-        <li>Settings → Embed Tokens → Create Token</li>
-        <li>Copy the token value</li>
-        <li>
-          Build the embed bundle:
-          <code
-            >PATH="/opt/homebrew/bin:/usr/bin:/bin:$PATH" pnpm --filter @moducore/embeds build</code
-          >
-        </li>
-        <li>Replace <code>YOUR_TOKEN_HERE</code> in this file with the copied token</li>
-        <li>
-          Open this HTML file via a local server (e.g. <code>npx serve .</code>) — not
-          <code>file://</code>
-        </li>
+        <li>Start: <code>pnpm dev</code></li>
+        <li>Log into CMS at <code>http://localhost:3001</code></li>
+        <li>Publish at least one journal entry and one CMS page</li>
+        <li>Settings → Embed Tokens → Create Token → copy the value</li>
+        <li>Build: <code>PATH="/opt/homebrew/bin:/usr/bin:/bin:$PATH" pnpm --filter @moducore/embeds build</code></li>
+        <li>Replace placeholders in this file</li>
+        <li>Serve: <code>npx serve .</code> and open the URL shown</li>
       </ol>
     </details>
   </body>

@@ -9,6 +9,7 @@ import { PageEditorPage } from './pages/PageEditorPage'
 import { PublicPageView } from './pages/PublicPageView'
 import { SettingsPage } from './pages/SettingsPage'
 import { JournalFeedPage } from './pages/JournalFeedPage'
+import { MediaPage } from './pages/MediaPage'
 
 export function App() {
   return (
@@ -28,6 +29,8 @@ export function App() {
 
           {/* Journal — connected read-only feed, authoring happens in apps/journal */}
           <Route path="/journal" element={<ProtectedRoute><JournalFeedPage /></ProtectedRoute>} />
+
+          <Route path="/media" element={<ProtectedRoute><MediaPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
