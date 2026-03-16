@@ -98,6 +98,21 @@ export const api = {
     updateCurrent: (body: { name?: string; slug?: string }) =>
       request<{ tenant: Tenant }>('/tenants/current', { method: 'PATCH', body: JSON.stringify(body) }),
   },
+  spotify: {
+    status: () => request<SpotifyStatus>('/spotify/status'),
+    saveCredentials: (body: { clientId: string; clientSecret: string }) =>
+      request<{ configured: boolean; connected: boolean }>('/spotify/credentials', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    disconnect: () => request<{ ok: boolean }>('/spotify/credentials', { method: 'DELETE' }),
+    getConnectUrl: () => `${API_URL}/spotify/connect`,
+    sync: () => request<{ ok: boolean }>('/spotify/sync', { method: 'POST' }),
+    getRecentlyPlayed: () =>
+      request<{ data: SpotifyRecentlyPlayedItem[]; syncedAt: string | null }>('/spotify/data/recently_played'),
+    getTopTracks: (range: 'short' | 'medium' | 'long') =>
+      request<{ data: SpotifyTrack[]; syncedAt: string | null }>(`/spotify/data/top_tracks_${range}`),
+  },
   media: {
     list: () => request<{ media: MediaItem[] }>('/media'),
     upload: (file: File) => {
@@ -146,4 +161,24 @@ export type MediaItem = {
   uploadedBy: string | null
   createdAt: string
   deletedAt: string | null
+}
+
+export type SpotifyStatus = {
+  configured: boolean
+  connected: boolean
+  spotifyDisplayName?: string
+  connectedAt?: string
+}
+
+export type SpotifyTrack = {
+  id: string
+  name: string
+  artists: { id: string; name: string }[]
+  album: { id: string; name: string; images: { url: string }[] }
+  duration_ms: number
+}
+
+export type SpotifyRecentlyPlayedItem = {
+  track: SpotifyTrack
+  played_at: string
 }

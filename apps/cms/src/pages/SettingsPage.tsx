@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { api, type AvailableApp, type EmbedToken, type ConnectorRow, type Tenant } from '../lib/api'
+import { api, type AvailableApp, type EmbedToken, type ConnectorRow, type Tenant, type SpotifyStatus } from '../lib/api'
+
+const SPOTIFY_APP_URL = import.meta.env.VITE_SPOTIFY_URL ?? 'http://localhost:3003'
 
 export function SettingsPage() {
   return (
@@ -10,6 +12,7 @@ export function SettingsPage() {
       <div style={{ marginTop: 48 }}>
         <AppsSection />
       </div>
+      <SpotifySection />
       <div style={{ marginTop: 48 }}>
         <EmbedTokensSection />
       </div>
@@ -151,6 +154,227 @@ function WorkspaceSection() {
       </form>
     </section>
   )
+}
+
+// ─── Spotify ─────────────────────────────────────────────────────────────────
+
+function SpotifySection() {
+  const [installed, setInstalled] = useState(false)
+  const [status, setStatus] = useState<SpotifyStatus | null>(null)
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    api.apps.list().then((d) => {
+      const app = d.apps.find((a) => a.slug === 'spotify')
+      if (app?.installed) {
+        setInstalled(true)
+        api.spotify.status().then(setStatus).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [])
+
+  if (!installed) return null
+
+  const handleSaveCredentials = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsSaving(true)
+    try {
+      await api.spotify.saveCredentials({ clientId, clientSecret })
+      setSaved(true)
+      const s = await api.spotify.status()
+      setStatus(s)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm('Disconnect Spotify? Tokens will be cleared.')) return
+    setIsDisconnecting(true)
+    try {
+      await api.spotify.disconnect()
+      const s = await api.spotify.status()
+      setStatus(s)
+    } catch {
+      // ignore
+    } finally {
+      setIsDisconnecting(false)
+    }
+  }
+
+  const handleSync = async () => {
+    setIsSyncing(true)
+    try {
+      await api.spotify.sync()
+      const s = await api.spotify.status()
+      setStatus(s)
+    } catch {
+      // ignore
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 48 }}>
+      <section>
+        <h3 style={sectionLabel}>Music Journal (Spotify)</h3>
+
+        {error && <p style={{ color: 'red', fontSize: 13, marginBottom: 12 }}>{error}</p>}
+
+        {/* Not yet configured — show credentials form */}
+        {!status?.configured && (
+          <div style={box}>
+            <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
+              Connect your Spotify developer app to enable the music journal.{' '}
+              <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>
+                Create an app →
+              </a>
+            </p>
+            {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 8 }}>Credentials saved.</p>}
+            <form onSubmit={handleSaveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                type="text"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="Client ID"
+                required
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                value={clientSecret}
+                onChange={(e) => setClientSecret(e.target.value)}
+                placeholder="Client Secret"
+                required
+                style={inputStyle}
+              />
+              <button type="submit" disabled={isSaving} style={btnDark}>
+                {isSaving ? 'Saving…' : 'Save credentials'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Configured but not connected */}
+        {status?.configured && !status?.connected && (
+          <div style={box}>
+            <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px' }}>
+              Credentials saved. Connect your Spotify account to start syncing.
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <a href={`${SPOTIFY_APP_URL}/connect`} target="_blank" rel="noreferrer" style={btnGreen}>
+                Connect Spotify →
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Connected */}
+        {status?.connected && (
+          <div style={box}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600 }}>
+                  Connected as {status.spotifyDisplayName}
+                </span>
+                {status.connectedAt && (
+                  <span style={{ fontSize: 12, color: '#999', marginLeft: 10 }}>
+                    since {new Date(status.connectedAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <a
+                href={SPOTIFY_APP_URL}
+                target="_blank"
+                rel="noreferrer"
+                style={{ ...btnDark, textDecoration: 'none', display: 'inline-block' }}
+              >
+                Open Music Journal ↗
+              </a>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={handleSync} disabled={isSyncing} style={btnOutline}>
+                {isSyncing ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button onClick={handleDisconnect} disabled={isDisconnecting} style={btnDanger}>
+                {isDisconnecting ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+const sectionLabel: React.CSSProperties = {
+  margin: '0 0 16px',
+  fontSize: 14,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+  color: '#888',
+}
+const box: React.CSSProperties = {
+  background: '#f9fafb',
+  border: '1px solid #e5e7eb',
+  borderRadius: 6,
+  padding: '14px 16px',
+}
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '7px 10px',
+  fontSize: 13,
+  border: '1px solid #ccc',
+  borderRadius: 4,
+  boxSizing: 'border-box',
+}
+const btnDark: React.CSSProperties = {
+  padding: '7px 14px',
+  background: '#111',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 13,
+  alignSelf: 'flex-start',
+}
+const btnGreen: React.CSSProperties = {
+  padding: '7px 14px',
+  background: '#1DB954',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 4,
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 600,
+}
+const btnOutline: React.CSSProperties = {
+  padding: '5px 10px',
+  fontSize: 12,
+  cursor: 'pointer',
+  borderRadius: 4,
+  border: '1px solid #ccc',
+  background: '#fff',
+}
+const btnDanger: React.CSSProperties = {
+  padding: '5px 10px',
+  fontSize: 12,
+  cursor: 'pointer',
+  borderRadius: 4,
+  border: '1px solid #fca5a5',
+  background: '#fff',
+  color: '#dc2626',
 }
 
 // ─── Apps ────────────────────────────────────────────────────────────────────

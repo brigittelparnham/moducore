@@ -14,6 +14,7 @@ import { embedRoutes } from './routes/embed'
 import { connectorsRoutes } from './routes/connectors'
 import { mediaRoutes } from './routes/media'
 import { tenantsRoutes } from './routes/tenants'
+import { spotifyRoutes } from './routes/spotify'
 import { startScheduler } from './scheduler'
 import type { AppVariables } from './types'
 
@@ -42,6 +43,7 @@ app.route('/embed', embedRoutes)
 app.route('/connectors', connectorsRoutes)
 app.route('/media', mediaRoutes)
 app.route('/tenants', tenantsRoutes)
+app.route('/spotify', spotifyRoutes)
 
 // Serve uploaded files — accessible by CMS, journal, and external embeds
 app.use('/uploads/*', serveStatic({ root: './' }))

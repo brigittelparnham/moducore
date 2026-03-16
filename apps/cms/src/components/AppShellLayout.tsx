@@ -28,6 +28,7 @@ export function AppShellLayout() {
   const navLinks = [
     { to: '/pages', label: 'Pages' },
     ...(installedSlugs.has('journal') ? [{ to: '/journal', label: 'Journal' }] : []),
+    ...(installedSlugs.has('spotify') ? [{ to: '/music', label: 'Music' }] : []),
     { to: '/media', label: 'Media' },
     { to: '/settings', label: 'Settings' },
   ]

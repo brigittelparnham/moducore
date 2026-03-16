@@ -129,6 +129,36 @@ Unlocks the external data feeds.
 
 ---
 
+## Phase 9 — Spotify Music Journal
+
+A music journal app: "what I listen to tells a story about me." Each tenant connects their own Spotify account using their own Spotify developer app credentials (no central quota). Data syncs on the existing 15-min scheduler. Visual views built with D3.
+
+**Model:** Same plugin pattern as journal — `apps/spotify` (standalone, port 3003) + `packages/spotify` (shared components). CMS shows a read-only music feed with "Open Spotify App →" link.
+
+**Credentials model:** Each tenant pastes their own Spotify `client_id` + `client_secret` into CMS Settings. They register their own Spotify developer app and add the API callback URL as an allowed redirect URI. No central Spotify quota problem.
+
+- [ ] DB schema: `spotify_connections` (credentials + OAuth tokens, one per tenant) + `spotify_data_cache` (synced snapshots, unique per tenant+type)
+- [ ] Migration + query helpers
+- [ ] API routes (`/spotify/status`, `/spotify/credentials`, `/spotify/connect`, `/spotify/callback`, `/spotify/data/:type`, `/spotify/now-playing`, `/spotify/sync`)
+- [ ] OAuth flow: save state token → redirect to Spotify → callback exchanges code → stores tokens → redirects to apps/spotify
+- [ ] Token refresh: auto-refresh access token when expired (Spotify tokens expire in 1 hour)
+- [ ] Scheduler integration: sync top_tracks × 3 ranges, top_artists × 3 ranges, recently_played, audio_features every 15 min
+- [ ] `packages/spotify`: SpotifyProvider, createSpotifyApi, types, SpotifyDashboardPage
+- [ ] `apps/spotify` (port 3003): SpotifyConnectPage (enter credentials + OAuth), SpotifyDashboardPage
+- [ ] Visual components: NowPlaying, TopTracksCard (4wk/6mo/all-time toggle), TopArtistsCard
+- [ ] D3 charts: GenreChart (horizontal bar, genres derived from top artists), VibeBoard (radar: danceability/energy/valence/acousticness/instrumentalness)
+- [ ] CMS integration: Spotify section in Settings (credentials form + connect link + status); SpotifyFeedPage in CMS nav (last played + top 3 tracks, read-only)
+- [ ] Embed widgets: `<spotify-top-tracks>`, `<spotify-now-playing>`, `<spotify-genre-chart>` + public embed routes
+- [ ] Add to moducore.iife.js bundle
+
+**Scopes:** `user-top-read user-read-recently-played user-read-currently-playing user-read-playback-state`
+
+**Env vars:** `SPOTIFY_APP_URL=http://localhost:3003` in apps/api/.env. Tenant credentials stored in DB (not env).
+
+**Done when:** tenant can connect Spotify, see their music journal dashboard, and embed widgets on an external site.
+
+---
+
 ## Future Phases (not yet scoped)
 
 - Additional connector adapters (Shopify, hospitality APIs, etc.)
@@ -154,3 +184,5 @@ Unlocks the external data feeds.
 | Backend | Fully custom | 2026-03 | No vendor lock-in, no ongoing costs |
 | Multi-tenancy | Row-level (tenant_id) | 2026-03 | Simpler than schema-per-tenant |
 | App composition | Plugin / connected feed | 2026-03 | Secondary apps author independently; CMS shows read-only feed with links back. CMS never duplicates editor UI. |
+| Spotify credentials | Tenant-owned (each tenant brings their own client_id/secret) | 2026-03 | Avoids central Spotify dev quota (5 users in dev mode). Aligns with self-hosted ethos. Tenants register their own Spotify developer app. |
+| Spotify charts | D3 (not Recharts) | 2026-03 | Full control over bespoke visual styling for the music journal aesthetic. |
