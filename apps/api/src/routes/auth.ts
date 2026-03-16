@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { setCookie, deleteCookie } from 'hono/cookie'
-import { users, tenants, tenantMembers, createSession, isTenantSlugAvailable } from '@moducore/db'
-import { signupSchema, loginSchema } from '@moducore/core'
+import { users, tenants, tenantMembers, createSession, isTenantSlugAvailable, getUserByEmail, getUserByResetToken, setPasswordResetToken, updateUserPassword } from '@moducore/db'
+import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@moducore/core'
 import { hashPassword, verifyPassword, generateToken } from '../lib/crypto'
+import { sendWelcomeEmail, sendPasswordResetEmail } from '../lib/email'
 import { getDb } from '../lib/db'
 import { SESSION_COOKIE, SESSION_DURATION_DAYS, requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
@@ -68,6 +69,12 @@ authRoutes.post('/signup', zValidator('json', signupSchema), async (c) => {
   })
 
   await createAndSetSession(c, user.id, tenant.id)
+
+  // Send welcome email — fire and forget (don't block signup on email failure)
+  sendWelcomeEmail(user.email, user.name, tenant.name).catch((err: unknown) =>
+    console.error('Failed to send welcome email:', err)
+  )
+
   return c.json({ user: toSafeUser(user), tenant }, 201)
 })
 
@@ -114,6 +121,39 @@ authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
 // POST /auth/logout
 authRoutes.post('/logout', async (c) => {
   deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  return c.json({ ok: true })
+})
+
+// POST /auth/forgot-password
+authRoutes.post('/forgot-password', zValidator('json', forgotPasswordSchema), async (c) => {
+  const db = getDb()
+  const { email } = c.req.valid('json')
+
+  // Always respond 200 — don't reveal whether the email exists
+  const user = await getUserByEmail(db, email)
+  if (user) {
+    const token = generateToken()
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    await setPasswordResetToken(db, user.id, token, expiresAt)
+    sendPasswordResetEmail(user.email, user.name, token).catch((err: unknown) =>
+      console.error('Failed to send password reset email:', err)
+    )
+  }
+
+  return c.json({ ok: true })
+})
+
+// POST /auth/reset-password
+authRoutes.post('/reset-password', zValidator('json', resetPasswordSchema), async (c) => {
+  const db = getDb()
+  const { token, password } = c.req.valid('json')
+
+  const user = await getUserByResetToken(db, token)
+  if (!user) return c.json({ error: 'Invalid or expired reset link' }, 400)
+
+  const passwordHash = await hashPassword(password)
+  await updateUserPassword(db, user.id, passwordHash)
+
   return c.json({ ok: true })
 })
 

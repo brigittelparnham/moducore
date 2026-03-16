@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { api, type MediaItem, API_URL } from '../lib/api'
 
 function formatBytes(n: number) {
@@ -13,7 +12,6 @@ function isImage(mimeType: string) {
 }
 
 export function MediaPage() {
-  const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [items, setItems] = useState<MediaItem[]>([])
@@ -69,15 +67,7 @@ export function MediaPage() {
     <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 16px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 14 }}
-          >
-            ← Back
-          </button>
-          <h1 style={{ margin: 0, fontSize: 20 }}>Media Library</h1>
-        </div>
+        <h1 style={{ margin: 0, fontSize: 20 }}>Media Library</h1>
 
         <div>
           <input

@@ -121,11 +121,11 @@ Unlocks the external data feeds.
 
 ## Phase 8 — Polish + Second Embed
 
-- [ ] Block-based editor for CMS pages + journal entries (TipTap or BlockNote)
-- [ ] CMS page embeds as web component
-- [ ] Media upload for CMS
-- [ ] Tenant settings page (name, slug, app management)
-- [ ] Basic email: transactional emails for signup / password reset (Resend or SMTP)
+- [x] Block-based editor for CMS pages + journal entries (TipTap StarterKit in packages/ui; RichTextEditor shared component with toolbar; PageEditorPage + JournalEditorPage updated; PublicPageView renders HTML; backwards-compatible with prior { text } format)
+- [x] CMS page embeds as web component (`GET /embed/pages` + `/embed/pages/:slug`; `<cms-page>` + `<cms-pages>` widgets; bundle renamed to `moducore.iife.js`; embed-test.html updated with all 4 widgets)
+- [x] Media upload for CMS (drag-drop upload + image grid + copy URL + delete; static serving via `GET /uploads/*`; `🖼` toolbar button in TipTap editor)
+- [x] Tenant settings page (name, slug) — `GET/PATCH /tenants/current`; WorkspaceSection in CMS Settings; slug availability check; owner/admin only
+- [x] Basic email: transactional emails via Resend — welcome email on signup; password reset flow (`POST /auth/forgot-password` + `/auth/reset-password`; 1-hour token; `/forgot-password` + `/reset-password` frontend pages; "Forgot password?" link on login)
 
 ---
 

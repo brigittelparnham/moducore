@@ -1,24 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { api, type AvailableApp, type EmbedToken, type ConnectorRow } from '../lib/api'
+import { api, type AvailableApp, type EmbedToken, type ConnectorRow, type Tenant } from '../lib/api'
 
 export function SettingsPage() {
-  const navigate = useNavigate()
-
   return (
     <div style={{ maxWidth: 700, margin: '40px auto', padding: '0 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 14 }}
-        >
-          ← Back
-        </button>
-        <h2 style={{ margin: 0 }}>Settings</h2>
-        <div />
-      </div>
+      <h2 style={{ margin: '0 0 32px' }}>Settings</h2>
 
-      <AppsSection />
+      <WorkspaceSection />
+      <div style={{ marginTop: 48 }}>
+        <AppsSection />
+      </div>
       <div style={{ marginTop: 48 }}>
         <EmbedTokensSection />
       </div>
@@ -29,20 +20,178 @@ export function SettingsPage() {
   )
 }
 
+// ─── Workspace ────────────────────────────────────────────────────────────────
+
+function WorkspaceSection() {
+  const [tenant, setTenant] = useState<Tenant | null>(null)
+  const [name, setName] = useState('')
+  const [slug, setSlug] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    api.tenants
+      .getCurrent()
+      .then((data) => {
+        setTenant(data.tenant)
+        setName(data.tenant.name)
+        setSlug(data.tenant.slug)
+      })
+      .catch(() => setError('Failed to load workspace settings'))
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!tenant) return
+    setIsSaving(true)
+    setError('')
+    setSuccess(false)
+    try {
+      const updated = await api.tenants.updateCurrent({
+        ...(name !== tenant.name && { name }),
+        ...(slug !== tenant.slug && { slug }),
+      })
+      setTenant(updated.tenant)
+      setName(updated.tenant.name)
+      setSlug(updated.tenant.slug)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to save')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <section>
+      <h3
+        style={{
+          margin: '0 0 16px',
+          fontSize: 14,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          color: '#888',
+        }}
+      >
+        Workspace
+      </h3>
+
+      {error && <p style={{ color: 'red', fontSize: 13 }}>{error}</p>}
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+            Workspace name
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              fontSize: 14,
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+            Workspace slug
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              required
+              minLength={2}
+              maxLength={30}
+              pattern="[a-z0-9-]+"
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                fontSize: 14,
+                border: '1px solid #ccc',
+                borderRadius: 4,
+                boxSizing: 'border-box',
+                fontFamily: 'monospace',
+              }}
+            />
+          </div>
+          <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+            Used in public page URLs: /p/{slug}/your-page
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            type="submit"
+            disabled={isSaving || !tenant || (name === tenant.name && slug === tenant.slug)}
+            style={{
+              padding: '8px 20px',
+              background: '#111',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+              fontSize: 13,
+              opacity: isSaving || !tenant || (name === tenant?.name && slug === tenant?.slug) ? 0.5 : 1,
+            }}
+          >
+            {isSaving ? 'Saving…' : 'Save changes'}
+          </button>
+          {success && <span style={{ fontSize: 13, color: '#16a34a' }}>Saved!</span>}
+        </div>
+      </form>
+    </section>
+  )
+}
+
 // ─── Apps ────────────────────────────────────────────────────────────────────
+
+const JOURNAL_URL_KEY = 'moducore_journal_url'
+const DEFAULT_JOURNAL_URL = import.meta.env.VITE_JOURNAL_URL ?? 'http://localhost:3002'
+
+function getJournalUrl() {
+  return localStorage.getItem(JOURNAL_URL_KEY) ?? DEFAULT_JOURNAL_URL
+}
 
 function AppsSection() {
   const [apps, setApps] = useState<AvailableApp[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [journalEntryCount, setJournalEntryCount] = useState<number | null>(null)
+  const [journalUrl, setJournalUrl] = useState(getJournalUrl())
+  const [journalUrlEditing, setJournalUrlEditing] = useState(false)
+  const [journalUrlDraft, setJournalUrlDraft] = useState(getJournalUrl())
+
+  const journalInstalled = apps.find((a) => a.slug === 'journal')?.installed ?? false
 
   useEffect(() => {
-    api.apps.list()
+    api.apps
+      .list()
       .then((data) => setApps(data.apps))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false))
   }, [])
+
+  // Fetch journal entry count when journal is installed
+  useEffect(() => {
+    if (!journalInstalled) return
+    fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/journal`, {
+      credentials: 'include',
+    })
+      .then((r) => r.json())
+      .then((d: { entries: unknown[] }) => setJournalEntryCount(d.entries?.length ?? 0))
+      .catch(() => setJournalEntryCount(null))
+  }, [journalInstalled])
 
   const toggle = async (app: AvailableApp) => {
     setBusy(app.slug)
@@ -63,37 +212,232 @@ function AppsSection() {
     }
   }
 
+  const saveJournalUrl = () => {
+    const val = journalUrlDraft.trim() || DEFAULT_JOURNAL_URL
+    localStorage.setItem(JOURNAL_URL_KEY, val)
+    setJournalUrl(val)
+    setJournalUrlEditing(false)
+  }
+
   return (
     <section>
-      <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#888' }}>
+      <h3
+        style={{
+          margin: '0 0 16px',
+          fontSize: 14,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          color: '#888',
+        }}
+      >
         Apps
       </h3>
       {error && <p style={{ color: 'red', fontSize: 13 }}>{error}</p>}
       {isLoading && <p style={{ color: '#666', fontSize: 13 }}>Loading…</p>}
+
       {apps.map((app) => (
-        <div
-          key={app.slug}
-          style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '16px 0', borderBottom: '1px solid #eee',
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 600 }}>{app.name}</div>
-            {app.description && <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{app.description}</div>}
-          </div>
-          <button
-            onClick={() => toggle(app)}
-            disabled={busy === app.slug}
+        <div key={app.slug}>
+          <div
             style={{
-              padding: '6px 14px', cursor: 'pointer', borderRadius: 4,
-              background: app.installed ? '#fff' : '#111',
-              color: app.installed ? '#111' : '#fff',
-              border: app.installed ? '1px solid #ccc' : 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '16px 0',
+              borderBottom: app.installed && app.slug === 'journal' ? 'none' : '1px solid #eee',
             }}
           >
-            {busy === app.slug ? '…' : app.installed ? 'Uninstall' : 'Install'}
-          </button>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontWeight: 600 }}>{app.name}</span>
+                {app.installed && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      background: '#dcfce7',
+                      color: '#166534',
+                      padding: '2px 7px',
+                      borderRadius: 10,
+                    }}
+                  >
+                    installed
+                  </span>
+                )}
+              </div>
+              {app.description && (
+                <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{app.description}</div>
+              )}
+            </div>
+            <button
+              onClick={() => toggle(app)}
+              disabled={busy === app.slug}
+              style={{
+                padding: '6px 14px',
+                cursor: 'pointer',
+                borderRadius: 4,
+                background: app.installed ? '#fff' : '#111',
+                color: app.installed ? '#111' : '#fff',
+                border: app.installed ? '1px solid #ccc' : 'none',
+              }}
+            >
+              {busy === app.slug ? '…' : app.installed ? 'Uninstall' : 'Install'}
+            </button>
+          </div>
+
+          {/* Journal-specific: connection panel when installed */}
+          {app.slug === 'journal' && app.installed && (
+            <div
+              style={{
+                background: '#f9fafb',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                padding: '14px 16px',
+                marginBottom: 16,
+              }}
+            >
+              {/* Status row */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
+                <div style={{ fontSize: 13, color: '#555' }}>
+                  {journalEntryCount !== null
+                    ? `${journalEntryCount} ${journalEntryCount === 1 ? 'entry' : 'entries'} in this journal`
+                    : 'Loading journal info…'}
+                </div>
+                <a
+                  href={journalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: 13,
+                    color: '#fff',
+                    background: '#111',
+                    padding: '5px 12px',
+                    borderRadius: 4,
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                  }}
+                >
+                  Open Journal app ↗
+                </a>
+              </div>
+
+              {/* First-time guidance */}
+              {journalEntryCount === 0 && (
+                <div
+                  style={{
+                    background: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    borderRadius: 4,
+                    padding: '10px 12px',
+                    fontSize: 13,
+                    color: '#78350f',
+                    marginBottom: 12,
+                  }}
+                >
+                  No entries yet. Open the journal app to write your first entry — it will appear
+                  here automatically.
+                </div>
+              )}
+
+              {/* Journal app URL */}
+              <div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 4,
+                  }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#666' }}>
+                    Journal app URL
+                  </label>
+                  {!journalUrlEditing && (
+                    <button
+                      onClick={() => {
+                        setJournalUrlDraft(journalUrl)
+                        setJournalUrlEditing(true)
+                      }}
+                      style={{
+                        fontSize: 12,
+                        color: '#3b82f6',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+                {journalUrlEditing ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input
+                      value={journalUrlDraft}
+                      onChange={(e) => setJournalUrlDraft(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '5px 8px',
+                        fontSize: 13,
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                        fontFamily: 'monospace',
+                      }}
+                    />
+                    <button
+                      onClick={saveJournalUrl}
+                      style={{
+                        padding: '5px 12px',
+                        fontSize: 12,
+                        background: '#111',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setJournalUrlEditing(false)}
+                      style={{
+                        padding: '5px 10px',
+                        fontSize: 12,
+                        background: '#fff',
+                        color: '#666',
+                        border: '1px solid #ccc',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <code
+                    style={{
+                      fontSize: 12,
+                      color: '#555',
+                      background: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 4,
+                      padding: '4px 8px',
+                      display: 'block',
+                    }}
+                  >
+                    {journalUrl}
+                  </code>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </section>
@@ -113,7 +457,8 @@ function EmbedTokensSection() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    api.embedTokens.list()
+    api.embedTokens
+      .list()
       .then((data) => setTokens(data.tokens))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false))
@@ -144,52 +489,123 @@ function EmbedTokensSection() {
 
   return (
     <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#888' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            color: '#888',
+          }}
+        >
           Embed Tokens
         </h3>
         <button
-          onClick={() => { setShowCreate(true); setNewTokenValue(null) }}
-          style={{ padding: '6px 14px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          onClick={() => {
+            setShowCreate(true)
+            setNewTokenValue(null)
+          }}
+          style={{
+            padding: '6px 14px',
+            background: '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           + Create Token
         </button>
       </div>
       <p style={{ fontSize: 13, color: '#666', marginTop: 0, marginBottom: 16 }}>
-        Embed your journal on any external site using a script tag and a token.
+        Embed your content on any external site using a script tag and a token.
       </p>
 
       {error && <p style={{ color: 'red', fontSize: 13 }}>{error}</p>}
 
       {showCreate && (
-        <CreateTokenForm
-          onCreated={handleCreated}
-          onCancel={() => setShowCreate(false)}
-        />
+        <CreateTokenForm onCreated={handleCreated} onCancel={() => setShowCreate(false)} />
       )}
 
-      {/* Show new token value once */}
       {newTokenValue && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, padding: 16, marginBottom: 16 }}>
+        <div
+          style={{
+            background: '#f0fdf4',
+            border: '1px solid #86efac',
+            borderRadius: 6,
+            padding: 16,
+            marginBottom: 16,
+          }}
+        >
           <p style={{ margin: '0 0 8px', fontWeight: 600, fontSize: 13, color: '#166534' }}>
             Token created — copy it now, it won't be shown again.
           </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-            <code style={{ flex: 1, fontSize: 12, background: '#fff', padding: '6px 10px', borderRadius: 4, border: '1px solid #ccc', wordBreak: 'break-all' }}>
+          <div
+            style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}
+          >
+            <code
+              style={{
+                flex: 1,
+                fontSize: 12,
+                background: '#fff',
+                padding: '6px 10px',
+                borderRadius: 4,
+                border: '1px solid #ccc',
+                wordBreak: 'break-all',
+              }}
+            >
               {newTokenValue}
             </code>
             <button
               onClick={() => copyToken(newTokenValue)}
-              style={{ padding: '6px 12px', fontSize: 12, cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff', whiteSpace: 'nowrap' }}
+              style={{
+                padding: '6px 12px',
+                fontSize: 12,
+                cursor: 'pointer',
+                borderRadius: 4,
+                border: '1px solid #ccc',
+                background: '#fff',
+                whiteSpace: 'nowrap',
+              }}
             >
               {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
           <details>
-            <summary style={{ fontSize: 12, color: '#166534', cursor: 'pointer' }}>Show embed snippet</summary>
-            <pre style={{ fontSize: 11, background: '#fff', padding: 10, borderRadius: 4, border: '1px solid #ccc', overflow: 'auto', marginTop: 8, whiteSpace: 'pre-wrap' }}>
-{`<script src="http://localhost:5173/embeds/journal.js"></script>
-<journal-widget token="${newTokenValue}" api-url="${API_URL}"></journal-widget>`}
+            <summary style={{ fontSize: 12, color: '#166534', cursor: 'pointer' }}>
+              Show embed snippets
+            </summary>
+            <pre
+              style={{
+                fontSize: 11,
+                background: '#fff',
+                padding: 10,
+                borderRadius: 4,
+                border: '1px solid #ccc',
+                overflow: 'auto',
+                marginTop: 8,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {`<!-- Journal feed -->
+<script src="${API_URL}/embed/moducore.iife.js"></script>
+<journal-widget token="${newTokenValue}" api-url="${API_URL}"></journal-widget>
+
+<!-- Single CMS page (replace "slug" with your page slug) -->
+<cms-page token="${newTokenValue}" slug="home" api-url="${API_URL}"></cms-page>
+
+<!-- All published CMS pages -->
+<cms-pages token="${newTokenValue}" api-url="${API_URL}"></cms-pages>`}
             </pre>
           </details>
         </div>
@@ -203,7 +619,13 @@ function EmbedTokensSection() {
       {tokens.map((token) => (
         <div
           key={token.id}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid #eee' }}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '14px 0',
+            borderBottom: '1px solid #eee',
+          }}
         >
           <div>
             <span style={{ fontWeight: 600, fontSize: 14 }}>{token.name}</span>
@@ -221,7 +643,15 @@ function EmbedTokensSection() {
           </div>
           <button
             onClick={() => handleRevoke(token.id)}
-            style={{ padding: '5px 12px', fontSize: 12, cursor: 'pointer', borderRadius: 4, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626' }}
+            style={{
+              padding: '5px 12px',
+              fontSize: 12,
+              cursor: 'pointer',
+              borderRadius: 4,
+              border: '1px solid #fca5a5',
+              background: '#fff',
+              color: '#dc2626',
+            }}
           >
             Revoke
           </button>
@@ -234,11 +664,27 @@ function EmbedTokensSection() {
 // ─── Connectors ──────────────────────────────────────────────────────────────
 
 const CONNECTOR_TYPES = [
-  { value: 'rss', label: 'RSS Feed', fields: [{ key: 'url', label: 'Feed URL', placeholder: 'https://example.com/feed.xml' }] },
-  { value: 'rest', label: 'REST API', fields: [
-    { key: 'url', label: 'Endpoint URL', placeholder: 'https://api.example.com/data' },
-    { key: 'headers', label: 'Headers (JSON)', placeholder: '{"Authorization":"Bearer xxx"}' },
-  ]},
+  {
+    value: 'rss',
+    label: 'RSS Feed',
+    fields: [{ key: 'url', label: 'Feed URL', placeholder: 'https://example.com/feed.xml' }],
+  },
+  {
+    value: 'rest',
+    label: 'REST API',
+    fields: [
+      {
+        key: 'url',
+        label: 'Endpoint URL',
+        placeholder: 'https://api.example.com/data',
+      },
+      {
+        key: 'headers',
+        label: 'Headers (JSON)',
+        placeholder: '{"Authorization":"Bearer xxx"}',
+      },
+    ],
+  },
 ]
 
 function ConnectorsSection() {
@@ -249,7 +695,8 @@ function ConnectorsSection() {
   const [syncing, setSyncing] = useState<string | null>(null)
 
   useEffect(() => {
-    api.connectors.list()
+    api.connectors
+      .list()
       .then((d) => setConnectors(d.connectors))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false))
@@ -263,7 +710,9 @@ function ConnectorsSection() {
   const handleToggle = async (connector: ConnectorRow) => {
     try {
       const updated = await api.connectors.update(connector.id, { enabled: !connector.enabled })
-      setConnectors((prev) => prev.map((c) => (c.id === connector.id ? updated.connector : c)))
+      setConnectors((prev) =>
+        prev.map((c) => (c.id === connector.id ? updated.connector : c))
+      )
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to update')
     }
@@ -283,7 +732,6 @@ function ConnectorsSection() {
     setSyncing(id)
     try {
       await api.connectors.sync(id)
-      // Refresh to get updated lastSyncedAt
       const data = await api.connectors.list()
       setConnectors(data.connectors)
     } catch (e: unknown) {
@@ -295,19 +743,43 @@ function ConnectorsSection() {
 
   return (
     <section>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#888' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            color: '#888',
+          }}
+        >
           Connectors
         </h3>
         <button
           onClick={() => setShowCreate(true)}
-          style={{ padding: '6px 14px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          style={{
+            padding: '6px 14px',
+            background: '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           + Add Connector
         </button>
       </div>
       <p style={{ fontSize: 13, color: '#666', marginTop: 0, marginBottom: 16 }}>
-        Connect external data sources (RSS feeds, REST APIs). Data syncs every 15 minutes automatically.
+        Connect external data sources. Data syncs every 15 minutes automatically.
       </p>
 
       {error && <p style={{ color: 'red', fontSize: 13 }}>{error}</p>}
@@ -325,15 +797,26 @@ function ConnectorsSection() {
       )}
 
       {connectors.map((connector) => (
-        <div
-          key={connector.id}
-          style={{ padding: '16px 0', borderBottom: '1px solid #eee' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div key={connector.id} style={{ padding: '16px 0', borderBottom: '1px solid #eee' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+            }}
+          >
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 600, fontSize: 14 }}>{connector.name}</span>
-                <span style={{ fontSize: 11, background: '#f3f4f6', color: '#555', padding: '2px 7px', borderRadius: 10 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    background: '#f3f4f6',
+                    color: '#555',
+                    padding: '2px 7px',
+                    borderRadius: 10,
+                  }}
+                >
                   {connector.type.toUpperCase()}
                 </span>
                 {!connector.enabled && (
@@ -349,23 +832,47 @@ function ConnectorsSection() {
                   : 'Never synced'}
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}>
+            <div
+              style={{ display: 'flex', gap: 6, flexShrink: 0, marginLeft: 12 }}
+            >
               <button
                 onClick={() => handleSync(connector.id)}
                 disabled={syncing === connector.id}
-                style={{ padding: '5px 10px', fontSize: 12, cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff' }}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  borderRadius: 4,
+                  border: '1px solid #ccc',
+                  background: '#fff',
+                }}
               >
                 {syncing === connector.id ? '…' : 'Sync now'}
               </button>
               <button
                 onClick={() => handleToggle(connector)}
-                style={{ padding: '5px 10px', fontSize: 12, cursor: 'pointer', borderRadius: 4, border: '1px solid #ccc', background: '#fff' }}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  borderRadius: 4,
+                  border: '1px solid #ccc',
+                  background: '#fff',
+                }}
               >
                 {connector.enabled ? 'Disable' : 'Enable'}
               </button>
               <button
                 onClick={() => handleDelete(connector.id)}
-                style={{ padding: '5px 10px', fontSize: 12, cursor: 'pointer', borderRadius: 4, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626' }}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  borderRadius: 4,
+                  border: '1px solid #fca5a5',
+                  background: '#fff',
+                  color: '#dc2626',
+                }}
               >
                 Delete
               </button>
@@ -409,41 +916,84 @@ function CreateConnectorForm({
   return (
     <form
       onSubmit={submit}
-      style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 16 }}
+      style={{
+        background: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 6,
+        padding: 16,
+        marginBottom: 16,
+      }}
     >
       <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Type</label>
+          <label
+            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+          >
+            Type
+          </label>
           <select
             value={type}
-            onChange={(e) => { setType(e.target.value); setConfig({}) }}
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, border: '1px solid #ccc', borderRadius: 4 }}
+            onChange={(e) => {
+              setType(e.target.value)
+              setConfig({})
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              fontSize: 13,
+              border: '1px solid #ccc',
+              borderRadius: 4,
+            }}
           >
             {CONNECTOR_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
           </select>
         </div>
         <div style={{ flex: 2 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Name</label>
+          <label
+            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+          >
+            Name
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. My Blog Feed"
             required
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              fontSize: 13,
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              boxSizing: 'border-box',
+            }}
           />
         </div>
       </div>
       {fields.map((field) => (
         <div key={field.key} style={{ marginBottom: 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{field.label}</label>
+          <label
+            style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+          >
+            {field.label}
+          </label>
           <input
             value={config[field.key] ?? ''}
             onChange={(e) => setConfig((prev) => ({ ...prev, [field.key]: e.target.value }))}
             placeholder={field.placeholder}
             required={field.key === 'url'}
-            style={{ width: '100%', padding: '8px 10px', fontSize: 13, border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }}
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              fontSize: 13,
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              boxSizing: 'border-box',
+            }}
           />
         </div>
       ))}
@@ -452,14 +1002,30 @@ function CreateConnectorForm({
         <button
           type="submit"
           disabled={isSaving || !name.trim()}
-          style={{ padding: '7px 16px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          style={{
+            padding: '7px 16px',
+            background: '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           {isSaving ? 'Adding…' : 'Add Connector'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          style={{ padding: '7px 16px', background: '#fff', color: '#666', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          style={{
+            padding: '7px 16px',
+            background: '#fff',
+            color: '#666',
+            border: '1px solid #ccc',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           Cancel
         </button>
@@ -467,8 +1033,6 @@ function CreateConnectorForm({
     </form>
   )
 }
-
-// ─── Embed Tokens (CreateTokenForm) ──────────────────────────────────────────
 
 function CreateTokenForm({
   onCreated,
@@ -488,7 +1052,7 @@ function CreateTokenForm({
     setIsSaving(true)
     setError('')
     try {
-      const data = await api.embedTokens.create({ name: name.trim(), appSlug: 'journal', write })
+      const data = await api.embedTokens.create({ name: name.trim(), write })
       onCreated(data.token)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to create')
@@ -500,20 +1064,50 @@ function CreateTokenForm({
   return (
     <form
       onSubmit={submit}
-      style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, marginBottom: 16 }}
+      style={{
+        background: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: 6,
+        padding: 16,
+        marginBottom: 16,
+      }}
     >
       <div style={{ marginBottom: 12 }}>
-        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Token name</label>
+        <label
+          style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+        >
+          Token name
+        </label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. My Website"
           required
-          style={{ width: '100%', padding: '8px 10px', fontSize: 13, border: '1px solid #ccc', borderRadius: 4, boxSizing: 'border-box' }}
+          style={{
+            width: '100%',
+            padding: '8px 10px',
+            fontSize: 13,
+            border: '1px solid #ccc',
+            borderRadius: 4,
+            boxSizing: 'border-box',
+          }}
         />
       </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12, cursor: 'pointer' }}>
-        <input type="checkbox" checked={write} onChange={(e) => setWrite(e.target.checked)} />
+      <label
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          fontSize: 13,
+          marginBottom: 12,
+          cursor: 'pointer',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={write}
+          onChange={(e) => setWrite(e.target.checked)}
+        />
         Allow write access
       </label>
       {error && <p style={{ color: 'red', fontSize: 13, margin: '0 0 8px' }}>{error}</p>}
@@ -521,14 +1115,30 @@ function CreateTokenForm({
         <button
           type="submit"
           disabled={isSaving || !name.trim()}
-          style={{ padding: '7px 16px', background: '#111', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          style={{
+            padding: '7px 16px',
+            background: '#111',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           {isSaving ? 'Creating…' : 'Create'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          style={{ padding: '7px 16px', background: '#fff', color: '#666', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer', fontSize: 13 }}
+          style={{
+            padding: '7px 16px',
+            background: '#fff',
+            color: '#666',
+            border: '1px solid #ccc',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 13,
+          }}
         >
           Cancel
         </button>

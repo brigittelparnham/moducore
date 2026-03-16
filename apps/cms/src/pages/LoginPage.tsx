@@ -10,6 +10,7 @@ export function LoginPage() {
   const [form, setForm] = useState<LoginInput>({ email: '', password: '' })
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const passwordReset = new URLSearchParams(window.location.search).get('reset') === '1'
 
   const set = (field: keyof LoginInput) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -36,6 +37,9 @@ export function LoginPage() {
         Don't have an account? <Link to="/signup">Create one</Link>
       </p>
 
+      {passwordReset && (
+        <p style={{ color: '#16a34a', marginBottom: 16 }}>Password updated — log in with your new password.</p>
+      )}
       {error && <p style={{ color: 'red', marginBottom: 16 }}>{error}</p>}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -44,7 +48,10 @@ export function LoginPage() {
           <input type="email" value={form.email} onChange={set('email')} required style={inputStyle} />
         </label>
         <label>
-          Password
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            Password
+            <Link to="/forgot-password" style={{ fontSize: 13, fontWeight: 400 }}>Forgot password?</Link>
+          </div>
           <input
             type="password"
             value={form.password}

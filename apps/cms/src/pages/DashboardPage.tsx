@@ -1,56 +1,86 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { api } from '../lib/api'
 
 export function DashboardPage() {
-  const { user, tenant, role, logout } = useAuth()
-  const navigate = useNavigate()
-  const [installedSlugs, setInstalledSlugs] = useState<Set<string>>(new Set())
+  const { tenant } = useAuth()
+  const [stats, setStats] = useState<{ pages: number; media: number } | null>(null)
 
   useEffect(() => {
-    api.apps.list()
-      .then((data) => setInstalledSlugs(new Set(data.apps.filter((a) => a.installed).map((a) => a.slug))))
-      .catch(() => {/* non-fatal */})
+    Promise.all([api.pages.list(), api.media.list()])
+      .then(([pagesData, mediaData]) =>
+        setStats({ pages: pagesData.pages.length, media: mediaData.media.length })
+      )
+      .catch(() => {})
   }, [])
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
-  }
-
   return (
-    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{tenant?.name}</h1>
-          <p style={{ margin: '4px 0 0', color: '#666' }}>
-            {user?.name} · {role}
-          </p>
+    <div style={{ maxWidth: 800, margin: '40px auto', padding: '0 24px' }}>
+      <h1 style={{ margin: '0 0 6px', fontSize: 24 }}>{tenant?.name}</h1>
+      <p style={{ margin: '0 0 40px', color: '#888', fontSize: 14 }}>
+        Your content workspace
+      </p>
+
+      {/* Quick stats */}
+      {stats && (
+        <div style={{ display: 'flex', gap: 16, marginBottom: 40 }}>
+          <StatCard label="Pages" value={stats.pages} to="/pages" />
+          <StatCard label="Media files" value={stats.media} to="/media" />
         </div>
-        <button onClick={handleLogout} style={{ padding: '8px 14px', cursor: 'pointer' }}>
-          Log out
-        </button>
+      )}
+
+      {/* Quick actions */}
+      <div style={{ display: 'flex', gap: 12 }}>
+        <Link
+          to="/pages/new"
+          style={{
+            padding: '10px 18px',
+            background: '#111',
+            color: '#fff',
+            borderRadius: 6,
+            textDecoration: 'none',
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          + New page
+        </Link>
+        <Link
+          to="/media"
+          style={{
+            padding: '10px 18px',
+            background: '#fff',
+            color: '#111',
+            borderRadius: 6,
+            textDecoration: 'none',
+            fontSize: 14,
+            border: '1px solid #e5e7eb',
+          }}
+        >
+          Upload media
+        </Link>
       </div>
-
-      <hr style={{ margin: '32px 0' }} />
-
-      <nav style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-        <Link to="/pages" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
-          Pages →
-        </Link>
-        {installedSlugs.has('journal') && (
-          <Link to="/journal" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
-            Journal →
-          </Link>
-        )}
-        <Link to="/media" style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
-          Media →
-        </Link>
-        <Link to="/settings" style={{ fontWeight: 600, textDecoration: 'none', color: '#666' }}>
-          Settings
-        </Link>
-      </nav>
     </div>
+  )
+}
+
+function StatCard({ label, value, to }: { label: string; value: number; to: string }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        display: 'block',
+        padding: '20px 24px',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        textDecoration: 'none',
+        minWidth: 140,
+        background: '#fafafa',
+      }}
+    >
+      <div style={{ fontSize: 28, fontWeight: 700, color: '#111' }}>{value}</div>
+      <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{label}</div>
+    </Link>
   )
 }

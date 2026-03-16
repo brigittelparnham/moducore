@@ -1,22 +1,31 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import Image from '@tiptap/extension-image'
+import { ResizableImage } from './ResizableImage'
 import './RichTextEditor.css'
 
 type Props = {
-  initialContent: string  // HTML string — uncontrolled after mount
+  initialContent: string    // HTML string — uncontrolled after mount
   onChange: (html: string) => void
   placeholder?: string
   minHeight?: number
+  /** Called when the user clicks the insert-image toolbar button.
+   *  Should open a picker and resolve with the chosen URL, or null if cancelled. */
+  onPickImage?: () => Promise<string | null>
 }
 
-export function RichTextEditor({ initialContent, onChange, placeholder = 'Write something…', minHeight = 300 }: Props) {
+export function RichTextEditor({
+  initialContent,
+  onChange,
+  placeholder = 'Write something…',
+  minHeight = 300,
+  onPickImage,
+}: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Placeholder.configure({ placeholder }),
-      Image.configure({ inline: false }),
+      ResizableImage.configure({ inline: false }),
     ],
     content: initialContent || '',
     onUpdate({ editor }) {
@@ -25,6 +34,16 @@ export function RichTextEditor({ initialContent, onChange, placeholder = 'Write 
   })
 
   if (!editor) return null
+
+  const handleInsertImage = async () => {
+    let url: string | null = null
+    if (onPickImage) {
+      url = await onPickImage()
+    } else {
+      url = window.prompt('Image URL')
+    }
+    if (url) editor.chain().focus().setImage({ src: url }).run()
+  }
 
   return (
     <div className="rich-editor-wrap">
@@ -138,10 +157,7 @@ export function RichTextEditor({ initialContent, onChange, placeholder = 'Write 
         </button>
         <button
           type="button"
-          onClick={() => {
-            const url = window.prompt('Image URL (paste from Media Library)')
-            if (url) editor.chain().focus().setImage({ src: url }).run()
-          }}
+          onClick={handleInsertImage}
           title="Insert image"
         >
           🖼

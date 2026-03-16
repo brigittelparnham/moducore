@@ -1,22 +1,23 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const JOURNAL_APP_URL = import.meta.env.VITE_JOURNAL_URL ?? 'http://localhost:3002'
+const DEFAULT_JOURNAL_URL = import.meta.env.VITE_JOURNAL_URL ?? 'http://localhost:3002'
 
 type Entry = {
   id: string
   title: string | null
-  content: { text?: string }
+  content: { text?: string; html?: string }
   tags: string[]
   status: 'draft' | 'published' | 'private'
   publishedAt: string | null
   updatedAt: string
 }
 
-function excerpt(text: string | undefined, max = 180) {
-  if (!text) return ''
-  return text.length > max ? text.slice(0, max).trimEnd() + '…' : text
+function extractText(content: Entry['content'], max = 180): string {
+  const raw = content.html
+    ? content.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    : content.text ?? ''
+  return raw.length > max ? raw.slice(0, max).trimEnd() + '…' : raw
 }
 
 function formatDate(iso: string) {
@@ -24,10 +25,11 @@ function formatDate(iso: string) {
 }
 
 export function JournalFeedPage() {
-  const navigate = useNavigate()
   const [entries, setEntries] = useState<Entry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const journalAppUrl = localStorage.getItem('moducore_journal_url') ?? DEFAULT_JOURNAL_URL
 
   useEffect(() => {
     fetch(`${API_URL}/journal`, { credentials: 'include' })
@@ -45,27 +47,26 @@ export function JournalFeedPage() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
         <div>
-          <button
-            onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: 14, padding: 0, marginBottom: 8, display: 'block' }}
-          >
-            ← Dashboard
-          </button>
           <h2 style={{ margin: 0 }}>Journal</h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#888' }}>
             Connected feed — entries are authored in the{' '}
-            <a href={JOURNAL_APP_URL} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>
+            <a href={journalAppUrl} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>
               Journal app ↗
             </a>
           </p>
         </div>
         <a
-          href={JOURNAL_APP_URL}
+          href={journalAppUrl}
           target="_blank"
           rel="noreferrer"
           style={{
-            padding: '8px 14px', background: '#111', color: '#fff',
-            borderRadius: 4, textDecoration: 'none', fontSize: 14, fontWeight: 600,
+            padding: '8px 14px',
+            background: '#111',
+            color: '#fff',
+            borderRadius: 4,
+            textDecoration: 'none',
+            fontSize: 14,
+            fontWeight: 600,
           }}
         >
           Open Journal →
@@ -82,7 +83,7 @@ export function JournalFeedPage() {
             Published
           </h3>
           {published.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} journalAppUrl={JOURNAL_APP_URL} />
+            <EntryCard key={entry.id} entry={entry} journalAppUrl={journalAppUrl} />
           ))}
         </>
       )}
@@ -94,7 +95,7 @@ export function JournalFeedPage() {
             Drafts
           </h3>
           {drafts.map((entry) => (
-            <EntryCard key={entry.id} entry={entry} journalAppUrl={JOURNAL_APP_URL} />
+            <EntryCard key={entry.id} entry={entry} journalAppUrl={journalAppUrl} />
           ))}
         </>
       )}
@@ -102,7 +103,7 @@ export function JournalFeedPage() {
       {!isLoading && entries.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 0', color: '#888' }}>
           <p>No entries yet.</p>
-          <a href={JOURNAL_APP_URL} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>
+          <a href={journalAppUrl} target="_blank" rel="noreferrer" style={{ color: '#3b82f6' }}>
             Write your first entry in the Journal app →
           </a>
         </div>
@@ -112,16 +113,11 @@ export function JournalFeedPage() {
 }
 
 function EntryCard({ entry, journalAppUrl }: { entry: Entry; journalAppUrl: string }) {
-  const body = excerpt(entry.content.text)
+  const body = extractText(entry.content)
   const date = entry.publishedAt ?? entry.updatedAt
 
   return (
-    <div
-      style={{
-        padding: '16px 0',
-        borderBottom: '1px solid #eee',
-      }}
-    >
+    <div style={{ padding: '16px 0', borderBottom: '1px solid #eee' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>

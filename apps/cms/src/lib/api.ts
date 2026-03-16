@@ -36,6 +36,15 @@ export type Page = {
   updatedAt: string
 }
 
+export type Tenant = {
+  id: string
+  name: string
+  slug: string
+  plan: 'free' | 'pro'
+  createdAt: string
+  updatedAt: string
+}
+
 export const api = {
   auth: {
     signup: (body: object) =>
@@ -44,6 +53,10 @@ export const api = {
       request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
     me: () => request('/auth/me'),
+    forgotPassword: (body: { email: string }) =>
+      request('/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
+    resetPassword: (body: { token: string; password: string }) =>
+      request('/auth/reset-password', { method: 'POST', body: JSON.stringify(body) }),
   },
   pages: {
     list: () => request<{ pages: Page[] }>('/pages'),
@@ -79,6 +92,11 @@ export const api = {
     delete: (id: string) => request<{ ok: boolean }>(`/connectors/${id}`, { method: 'DELETE' }),
     sync: (id: string) => request<{ ok: boolean }>(`/connectors/${id}/sync`, { method: 'POST' }),
     getData: (id: string) => request<{ data: unknown; syncedAt: string | null }>(`/connectors/${id}/data`),
+  },
+  tenants: {
+    getCurrent: () => request<{ tenant: Tenant }>('/tenants/current'),
+    updateCurrent: (body: { name?: string; slug?: string }) =>
+      request<{ tenant: Tenant }>('/tenants/current', { method: 'PATCH', body: JSON.stringify(body) }),
   },
   media: {
     list: () => request<{ media: MediaItem[] }>('/media'),

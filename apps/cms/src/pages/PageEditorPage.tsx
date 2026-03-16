@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, type Page } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { RichTextEditor } from '@moducore/ui'
+import { MediaPicker } from '../components/MediaPicker'
 
 function slugify(text: string) {
   return text
@@ -26,6 +27,10 @@ export function PageEditorPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
+
+  // MediaPicker state
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const pickerResolveRef = useRef<((url: string | null) => void) | null>(null)
 
   useEffect(() => {
     if (isNew) return
@@ -96,6 +101,25 @@ export function PageEditorPage() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  /** Opens the MediaPicker and returns the selected URL, or null if cancelled. */
+  const onPickImage = (): Promise<string | null> =>
+    new Promise((resolve) => {
+      pickerResolveRef.current = resolve
+      setPickerOpen(true)
+    })
+
+  const handlePickerSelect = (url: string) => {
+    setPickerOpen(false)
+    pickerResolveRef.current?.(url)
+    pickerResolveRef.current = null
+  }
+
+  const handlePickerClose = () => {
+    setPickerOpen(false)
+    pickerResolveRef.current?.(null)
+    pickerResolveRef.current = null
   }
 
   if (isLoading) return <p style={{ padding: 40, color: '#666' }}>Loading…</p>
@@ -209,7 +233,13 @@ export function PageEditorPage() {
         onChange={setBody}
         placeholder="Write your page content here…"
         minHeight={400}
+        onPickImage={onPickImage}
       />
+
+      {/* Media picker modal */}
+      {pickerOpen && (
+        <MediaPicker onSelect={handlePickerSelect} onClose={handlePickerClose} />
+      )}
     </div>
   )
 }
