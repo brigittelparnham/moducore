@@ -17,6 +17,7 @@ export type SpotifyTrack = {
   duration_ms: number
   explicit: boolean
   preview_url: string | null
+  popularity?: number
 }
 
 export type SpotifyArtist = {
@@ -24,6 +25,7 @@ export type SpotifyArtist = {
   name: string
   genres: string[]
   images: SpotifyImage[]
+  popularity?: number
 }
 
 export type SpotifyRecentlyPlayedItem = {

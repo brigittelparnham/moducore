@@ -2,21 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { useSpotify } from '../context'
 import { createSpotifyApi } from '../api'
-import type { SpotifyArtist } from '../types'
+import type { SpotifyRecentlyPlayedItem } from '../types'
 
-type GenreEntry = { genre: string; count: number }
+type HourEntry = { hour: number; count: number; label: string }
 
-function aggregateGenres(artists: SpotifyArtist[]): GenreEntry[] {
-  const counts = new Map<string, number>()
-  for (const artist of artists) {
-    for (const genre of artist.genres) {
-      counts.set(genre, (counts.get(genre) ?? 0) + 1)
-    }
+const HOUR_LABELS: string[] = [
+  '12am','1am','2am','3am','4am','5am',
+  '6am','7am','8am','9am','10am','11am',
+  '12pm','1pm','2pm','3pm','4pm','5pm',
+  '6pm','7pm','8pm','9pm','10pm','11pm',
+]
+
+function buildHourBuckets(items: SpotifyRecentlyPlayedItem[]): HourEntry[] {
+  const counts = new Array<number>(24).fill(0)
+  for (const item of items) {
+    const h = new Date(item.played_at).getHours()
+    counts[h]++
   }
-  return Array.from(counts.entries())
-    .map(([genre, count]) => ({ genre, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
+  return counts.map((count, hour) => ({ hour, count, label: HOUR_LABELS[hour] }))
 }
 
 export function GenreChart() {
@@ -24,85 +27,88 @@ export function GenreChart() {
   const api = createSpotifyApi(apiBase)
   const svgRef = useRef<SVGSVGElement>(null)
 
-  const [genres, setGenres] = useState<GenreEntry[]>([])
+  const [hours, setHours] = useState<HourEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    api.getTopArtists('long')
-      .then(({ data }) => setGenres(aggregateGenres(data ?? [])))
-      .catch(() => setGenres([]))
+    api.getRecentlyPlayed()
+      .then(({ data }) => setHours(buildHourBuckets((data ?? []) as SpotifyRecentlyPlayedItem[])))
+      .catch(() => setHours([]))
       .finally(() => setIsLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase])
 
   useEffect(() => {
-    if (!svgRef.current || genres.length === 0) return
+    if (!svgRef.current || hours.length === 0) return
 
-    const margin = { top: 8, right: 30, bottom: 8, left: 120 }
+    const margin = { top: 12, right: 12, bottom: 32, left: 28 }
     const containerWidth = svgRef.current.parentElement?.clientWidth ?? 400
-    const width = containerWidth - margin.left - margin.right
-    const barHeight = 28
-    const height = genres.length * barHeight
+    const height = 160
+
+    const w = containerWidth - margin.left - margin.right
+    const h = height - margin.top - margin.bottom
 
     d3.select(svgRef.current).selectAll('*').remove()
 
     const svg = d3.select(svgRef.current)
       .attr('width', containerWidth)
-      .attr('height', height + margin.top + margin.bottom)
+      .attr('height', height)
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`)
 
-    const x = d3.scaleLinear()
-      .domain([0, d3.max(genres, (d) => d.count) ?? 1])
-      .range([0, width])
+    const x = d3.scaleBand()
+      .domain(hours.map((d) => String(d.hour)))
+      .range([0, w])
+      .padding(0.15)
 
-    const y = d3.scaleBand()
-      .domain(genres.map((d) => d.genre))
-      .range([0, height])
-      .padding(0.3)
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(hours, (d) => d.count) ?? 1])
+      .range([h, 0])
+      .nice()
 
     // Bars
     svg.selectAll('rect')
-      .data(genres)
+      .data(hours)
       .join('rect')
-      .attr('y', (d) => y(d.genre) ?? 0)
-      .attr('height', y.bandwidth())
-      .attr('x', 0)
-      .attr('width', (d) => x(d.count))
-      .attr('rx', 4)
+      .attr('x', (d) => x(String(d.hour)) ?? 0)
+      .attr('y', (d) => y(d.count))
+      .attr('width', x.bandwidth())
+      .attr('height', (d) => h - y(d.count))
+      .attr('rx', 2)
       .attr('fill', '#1DB954')
-      .attr('opacity', (_, i) => 1 - i * 0.06)
+      .attr('opacity', (d) => d.count === 0 ? 0.15 : 0.75 + (d.count / (d3.max(hours, (e) => e.count) ?? 1)) * 0.25)
 
-    // Count labels
-    svg.selectAll('text.count')
-      .data(genres)
-      .join('text')
-      .attr('class', 'count')
-      .attr('x', (d) => x(d.count) + 6)
-      .attr('y', (d) => (y(d.genre) ?? 0) + y.bandwidth() / 2)
-      .attr('dy', '0.35em')
-      .attr('font-size', 11)
-      .attr('fill', '#555')
-      .text((d) => d.count)
-
-    // Y axis labels
+    // Y axis (just 2 ticks)
     svg.append('g')
-      .call(d3.axisLeft(y).tickSize(0))
+      .call(d3.axisLeft(y).ticks(3).tickSize(-w))
       .call((g) => g.select('.domain').remove())
-      .selectAll('text')
-      .attr('font-size', 12)
-      .attr('fill', '#333')
-      .attr('dx', -6)
-  }, [genres])
+      .call((g) => g.selectAll('.tick line').attr('stroke', '#f0f0f0'))
+      .call((g) => g.selectAll('.tick text').attr('font-size', 10).attr('fill', '#aaa'))
+
+    // X axis — only label every 6 hours
+    const xAxisHours = [0, 6, 12, 18]
+    svg.append('g')
+      .attr('transform', `translate(0,${h})`)
+      .call(
+        d3.axisBottom(x)
+          .tickValues(xAxisHours.map(String))
+          .tickFormat((d) => HOUR_LABELS[Number(d)])
+          .tickSize(0)
+      )
+      .call((g) => g.select('.domain').remove())
+      .call((g) => g.selectAll('.tick text').attr('font-size', 11).attr('fill', '#888').attr('dy', '1.2em'))
+  }, [hours])
+
+  const hasData = hours.some((h) => h.count > 0)
 
   return (
     <div style={card}>
-      <h3 style={heading}>Genre Mix</h3>
-      <p style={{ margin: '0 0 16px', fontSize: 12, color: '#999' }}>From your all-time top artists</p>
+      <h3 style={heading}>Listening Hours</h3>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#999' }}>When you play music (last 50 plays)</p>
       {isLoading ? (
         <p style={muted}>Loading…</p>
-      ) : genres.length === 0 ? (
-        <p style={muted}>No genre data yet.</p>
+      ) : !hasData ? (
+        <p style={muted}>No listening history yet.</p>
       ) : (
         <div style={{ overflowX: 'hidden' }}>
           <svg ref={svgRef} style={{ display: 'block' }} />

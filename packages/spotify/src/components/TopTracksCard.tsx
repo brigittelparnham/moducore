@@ -57,9 +57,9 @@ export function TopTracksCard() {
           {tracks.map((track, i) => (
             <li key={track.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ width: 20, textAlign: 'right', color: '#999', fontSize: 13, flexShrink: 0 }}>{i + 1}</span>
-              {track.album.images[0]?.url && (
+              {track.album?.images?.[0]?.url && (
                 <img
-                  src={track.album.images[0].url}
+                  src={track.album.images[0]!.url}
                   alt={track.album.name}
                   style={{ width: 44, height: 44, borderRadius: 4, flexShrink: 0, objectFit: 'cover' }}
                 />
@@ -69,7 +69,7 @@ export function TopTracksCard() {
                   {track.name}
                 </div>
                 <div style={{ fontSize: 12, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {track.artists.map((a) => a.name).join(', ')}
+                  {(track.artists ?? []).map((a) => a.name).join(', ')}
                 </div>
               </div>
               <span style={{ fontSize: 12, color: '#999', flexShrink: 0 }}>{formatMs(track.duration_ms)}</span>

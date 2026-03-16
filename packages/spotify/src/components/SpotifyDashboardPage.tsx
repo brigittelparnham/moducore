@@ -18,7 +18,7 @@ export function SpotifyDashboardPage() {
         <TopArtistsCard />
       </div>
 
-      {/* Row 3: Genre Chart + Vibe Board */}
+      {/* Row 3: Listening Hours + Music Eras */}
       <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
         <GenreChart />
         <VibeBoard />

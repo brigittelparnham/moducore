@@ -65,7 +65,7 @@ export function TopArtistsCard() {
                 <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {artist.name}
                 </div>
-                {artist.genres.length > 0 && (
+                {(artist.genres?.length ?? 0) > 0 && (
                   <div style={{ fontSize: 12, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {artist.genres.slice(0, 3).join(', ')}
                   </div>
