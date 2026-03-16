@@ -163,6 +163,8 @@ function SpotifySection() {
   const [status, setStatus] = useState<SpotifyStatus | null>(null)
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
+  const [redirectUri, setRedirectUri] = useState('')
+  const [showCredentialForm, setShowCredentialForm] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -186,8 +188,12 @@ function SpotifySection() {
     setError('')
     setIsSaving(true)
     try {
-      await api.spotify.saveCredentials({ clientId, clientSecret })
+      await api.spotify.saveCredentials({ clientId, clientSecret, redirectUri: redirectUri.trim() || undefined })
       setSaved(true)
+      setClientId('')
+      setClientSecret('')
+      setRedirectUri('')
+      setShowCredentialForm(false)
       const s = await api.spotify.status()
       setStatus(s)
     } catch (err) {
@@ -231,16 +237,18 @@ function SpotifySection() {
 
         {error && <p style={{ color: 'red', fontSize: 13, marginBottom: 12 }}>{error}</p>}
 
-        {/* Not yet configured — show credentials form */}
-        {!status?.configured && (
+        {/* Credentials form — shown when not yet configured, or when editing */}
+        {(!status?.configured || showCredentialForm) && (
           <div style={box}>
-            <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
-              Connect your Spotify developer app to enable the music journal.{' '}
-              <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>
-                Create an app →
-              </a>
-            </p>
-            {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 8 }}>Credentials saved.</p>}
+            {!status?.configured && (
+              <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
+                Connect your Spotify developer app to enable the music journal.{' '}
+                <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>
+                  Create an app →
+                </a>
+              </p>
+            )}
+            {saved && <p style={{ color: '#16a34a', fontSize: 13, marginBottom: 8 }}>Credentials updated.</p>}
             <form onSubmit={handleSaveCredentials} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input
                 type="text"
@@ -258,29 +266,51 @@ function SpotifySection() {
                 required
                 style={inputStyle}
               />
-              <button type="submit" disabled={isSaving} style={btnDark}>
-                {isSaving ? 'Saving…' : 'Save credentials'}
-              </button>
+              <div>
+                <input
+                  type="url"
+                  value={redirectUri}
+                  onChange={(e) => setRedirectUri(e.target.value)}
+                  placeholder={`Redirect URI (e.g. http://127.0.0.1:3000/spotify/callback)`}
+                  style={inputStyle}
+                />
+                <p style={{ fontSize: 11, color: '#999', margin: '3px 0 0' }}>
+                  Must match exactly what you registered in your Spotify app dashboard. Leave blank to use the default.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="submit" disabled={isSaving} style={btnDark}>
+                  {isSaving ? 'Saving…' : 'Save credentials'}
+                </button>
+                {showCredentialForm && (
+                  <button type="button" onClick={() => { setShowCredentialForm(false); setClientId(''); setClientSecret(''); setRedirectUri('') }} style={btnOutline}>
+                    Cancel
+                  </button>
+                )}
+              </div>
             </form>
           </div>
         )}
 
         {/* Configured but not connected */}
-        {status?.configured && !status?.connected && (
+        {status?.configured && !status?.connected && !showCredentialForm && (
           <div style={box}>
             <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px' }}>
               Credentials saved. Connect your Spotify account to start syncing.
             </p>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <a href={`${SPOTIFY_APP_URL}/connect`} target="_blank" rel="noreferrer" style={btnGreen}>
+              <a href={api.spotify.getConnectUrl()} style={btnGreen}>
                 Connect Spotify →
               </a>
+              <button type="button" onClick={() => setShowCredentialForm(true)} style={btnOutline}>
+                Update credentials
+              </button>
             </div>
           </div>
         )}
 
         {/* Connected */}
-        {status?.connected && (
+        {status?.connected && !showCredentialForm && (
           <div style={box}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div>
@@ -305,6 +335,9 @@ function SpotifySection() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={handleSync} disabled={isSyncing} style={btnOutline}>
                 {isSyncing ? 'Syncing…' : 'Sync now'}
+              </button>
+              <button type="button" onClick={() => setShowCredentialForm(true)} style={btnOutline}>
+                Update credentials
               </button>
               <button onClick={handleDisconnect} disabled={isDisconnecting} style={btnDanger}>
                 {isDisconnecting ? 'Disconnecting…' : 'Disconnect'}

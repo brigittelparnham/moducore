@@ -62,7 +62,7 @@ export function SpotifyFeedPage() {
         <h2 style={pageHeading}>Music Journal</h2>
         <p style={muted}>
           Credentials saved.{' '}
-          <a href={`${SPOTIFY_APP_URL}/connect`} target="_blank" rel="noreferrer" style={{ color: '#1DB954' }}>
+          <a href={api.spotify.getConnectUrl()} style={{ color: '#1DB954' }}>
             Connect your Spotify account →
           </a>
         </p>

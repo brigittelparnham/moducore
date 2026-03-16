@@ -7,6 +7,7 @@ export const spotifyConnections = pgTable('spotify_connections', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }).unique(),
   clientId: text('client_id').notNull(),
   clientSecret: text('client_secret').notNull(),
+  redirectUri: text('redirect_uri'),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),

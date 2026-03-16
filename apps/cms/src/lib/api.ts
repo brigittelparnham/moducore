@@ -100,7 +100,7 @@ export const api = {
   },
   spotify: {
     status: () => request<SpotifyStatus>('/spotify/status'),
-    saveCredentials: (body: { clientId: string; clientSecret: string }) =>
+    saveCredentials: (body: { clientId: string; clientSecret: string; redirectUri?: string }) =>
       request<{ configured: boolean; connected: boolean }>('/spotify/credentials', {
         method: 'POST',
         body: JSON.stringify(body),

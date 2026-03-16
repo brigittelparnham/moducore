@@ -22,14 +22,15 @@ export async function upsertSpotifyCredentials(
   db: DbClient,
   tenantId: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  redirectUri?: string
 ): Promise<SpotifyConnection> {
   const [row] = await db
     .insert(spotifyConnections)
-    .values({ tenantId, clientId, clientSecret })
+    .values({ tenantId, clientId, clientSecret, redirectUri: redirectUri ?? null })
     .onConflictDoUpdate({
       target: spotifyConnections.tenantId,
-      set: { clientId, clientSecret, updatedAt: new Date() },
+      set: { clientId, clientSecret, redirectUri: redirectUri ?? null, updatedAt: new Date() },
     })
     .returning()
   return row

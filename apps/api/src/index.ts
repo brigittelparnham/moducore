@@ -26,6 +26,7 @@ app.use(
     origin: [
       process.env.CMS_URL ?? 'http://localhost:3001',
       process.env.JOURNAL_URL ?? 'http://localhost:3002',
+      process.env.SPOTIFY_APP_URL ?? 'http://localhost:3003',
     ],
     credentials: true,
   })

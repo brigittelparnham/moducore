@@ -35,7 +35,8 @@ function getSpotifyAppUrl() {
 }
 
 function getCallbackUrl() {
-  return `${process.env.API_URL ?? 'http://localhost:3000'}/spotify/callback`
+  // Spotify does not allow 'localhost' — use 127.0.0.1 for local dev
+  return `${process.env.API_URL ?? 'http://127.0.0.1:3000'}/spotify/callback`
 }
 
 // ─── Token helpers ────────────────────────────────────────────────────────────
@@ -43,7 +44,8 @@ function getCallbackUrl() {
 async function exchangeCodeForTokens(
   code: string,
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  redirectUri: string
 ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const res = await fetch(SPOTIFY_TOKEN_URL, {
     method: 'POST',
@@ -54,7 +56,7 @@ async function exchangeCodeForTokens(
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: getCallbackUrl(),
+      redirect_uri: redirectUri,
     }),
   })
   if (!res.ok) throw new Error('Failed to exchange Spotify auth code')
@@ -124,11 +126,15 @@ spotifyRoutes.get('/status', requireAuth, async (c) => {
   })
 })
 
-// POST /spotify/credentials — save client_id + client_secret
+// POST /spotify/credentials — save client_id + client_secret + optional redirect_uri
 spotifyRoutes.post(
   '/credentials',
   requireAuth,
-  zValidator('json', z.object({ clientId: z.string().min(1), clientSecret: z.string().min(1) })),
+  zValidator('json', z.object({
+    clientId: z.string().min(1),
+    clientSecret: z.string().min(1),
+    redirectUri: z.string().url().optional(),
+  })),
   async (c) => {
     const db = getDb()
     const tenant = c.get('tenant')!
@@ -136,8 +142,8 @@ spotifyRoutes.post(
     if (member.role !== 'owner' && member.role !== 'admin') {
       return c.json({ error: 'Only owners and admins can update Spotify credentials' }, 403)
     }
-    const { clientId, clientSecret } = c.req.valid('json')
-    const conn = await upsertSpotifyCredentials(db, tenant.id, clientId, clientSecret)
+    const { clientId, clientSecret, redirectUri } = c.req.valid('json')
+    const conn = await upsertSpotifyCredentials(db, tenant.id, clientId, clientSecret, redirectUri)
     return c.json({ configured: true, connected: !!conn.accessToken })
   }
 )
@@ -164,11 +170,12 @@ spotifyRoutes.get('/connect', requireAuth, async (c) => {
   const state = generateToken()
   await updateSpotifyOAuthState(db, tenant.id, state)
 
+  const redirectUri = conn.redirectUri ?? getCallbackUrl()
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: conn.clientId,
     scope: SPOTIFY_SCOPES,
-    redirect_uri: getCallbackUrl(),
+    redirect_uri: redirectUri,
     state,
   })
 
@@ -193,7 +200,8 @@ spotifyRoutes.get('/callback', async (c) => {
     const { accessToken, refreshToken, expiresIn } = await exchangeCodeForTokens(
       code,
       conn.clientId,
-      conn.clientSecret
+      conn.clientSecret,
+      conn.redirectUri ?? getCallbackUrl()
     )
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000)
 
