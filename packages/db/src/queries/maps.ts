@@ -1,4 +1,4 @@
-import { eq, and, lt, desc, asc } from 'drizzle-orm'
+import { eq, and, lt, gte, lte, desc, asc, sql } from 'drizzle-orm'
 import type { DbClient } from '../client'
 import {
   locationPings, knownPlaces, knownRoutes, journeys,
@@ -182,6 +182,38 @@ export async function getJourneysByRoute(
     .where(and(eq(journeys.tenantId, tenantId), eq(journeys.routeId, routeId)))
     .orderBy(desc(journeys.startedAt))
     .limit(limit)
+}
+
+export async function getJourneysByDate(
+  db: DbClient,
+  tenantId: string,
+  date: string  // YYYY-MM-DD
+): Promise<Journey[]> {
+  const from = new Date(`${date}T00:00:00`)
+  const to = new Date(`${date}T23:59:59.999`)
+  return db.select().from(journeys)
+    .where(and(
+      eq(journeys.tenantId, tenantId),
+      gte(journeys.startedAt, from),
+      lte(journeys.startedAt, to),
+    ))
+    .orderBy(asc(journeys.startedAt))
+}
+
+export async function getJourneysDaySummary(
+  db: DbClient,
+  tenantId: string,
+  date: string  // YYYY-MM-DD
+): Promise<{
+  date: string
+  count: number
+  totalDistanceM: number
+  modes: string[]
+}> {
+  const list = await getJourneysByDate(db, tenantId, date)
+  const modes = [...new Set(list.map((j) => j.mode).filter(Boolean))] as string[]
+  const totalDistanceM = list.reduce((sum, j) => sum + (j.distanceM ?? 0), 0)
+  return { date, count: list.length, totalDistanceM, modes }
 }
 
 export async function getTodayJourneys(

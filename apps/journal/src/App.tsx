@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { JournalProvider, JournalListPage, JournalEditorPage } from '@moducore/journal'
+import { AppSwitcher } from '@moducore/hub'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const CMS_URL = import.meta.env.VITE_CMS_URL ?? 'http://localhost:3001'
@@ -63,6 +64,7 @@ export function App() {
             <Route path="/:id" element={<ProtectedRoute><JournalEditorRoute /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <AppSwitcher />
         </JournalProvider>
       </AuthProvider>
     </BrowserRouter>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, type AvailableApp, type EmbedToken, type ConnectorRow, type Tenant, type SpotifyStatus } from '../lib/api'
+import { HubSettings } from '@moducore/hub'
 
 const SPOTIFY_APP_URL = import.meta.env.VITE_SPOTIFY_URL ?? 'http://localhost:3003'
 const API_URL_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
@@ -16,6 +17,13 @@ export function SettingsPage() {
       <SpotifySection />
       <MapsSection />
       <HabitsSection />
+      <div style={{ marginTop: 48 }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Connected Apps</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
+          Configure the URLs for each moducore app. These power the app switcher and the day context panel in your journal entries.
+        </p>
+        <HubSettings />
+      </div>
       <div style={{ marginTop: 48 }}>
         <EmbedTokensSection />
       </div>

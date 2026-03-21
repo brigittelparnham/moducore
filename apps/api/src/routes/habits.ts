@@ -7,6 +7,7 @@ import {
   logHabit, getHabitLogs,
   getRewards, createReward, redeemReward,
   addPoints, getPointsTotal, getPointsLedger,
+  getHabitsDaySummary,
 } from '@moducore/db'
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
@@ -263,6 +264,16 @@ habitsRoutes.post('/rewards/:id/redeem', requireAuth, async (c) => {
 
   const updated = await redeemReward(db, tenant.id, rewardId)
   return c.json({ reward: updated })
+})
+
+// ─── Day summary (for cross-app DayContextPanel) ──────────────────────────────
+
+habitsRoutes.get('/day-summary', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  const date = c.req.query('date') ?? new Date().toISOString().slice(0, 10)
+  const summary = await getHabitsDaySummary(db, tenant.id, date)
+  return c.json(summary)
 })
 
 // ─── Points ───────────────────────────────────────────────────────────────────

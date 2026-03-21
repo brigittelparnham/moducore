@@ -3,6 +3,7 @@ import { useJournal } from '../context'
 import { createJournalApi } from '../api'
 import type { JournalEntry } from '../types'
 import { RichTextEditor } from '@moducore/ui'
+import { DayContextPanel } from './DayContextPanel'
 
 type Props = {
   entryId: string | null  // null = new entry
@@ -155,6 +156,13 @@ export function JournalEditorPage({ entryId, onBack, onCreated }: Props) {
           padding: '6px 10px', marginBottom: 16, boxSizing: 'border-box', outline: 'none',
         }}
       />
+
+      {entry && (
+        <DayContextPanel
+          date={entry.createdAt.slice(0, 10)}
+          apiBase={apiBase}
+        />
+      )}
 
       <RichTextEditor
         key={entryId ?? 'new'}

@@ -1,5 +1,5 @@
 {
-  "name": "@moducore/journal",
+  "name": "@moducore/hub",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,11 +9,6 @@
   "scripts": {
     "lint": "eslint src",
     "build": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@moducore/core": "workspace:*",
-    "@moducore/hub": "workspace:*",
-    "@moducore/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.0",

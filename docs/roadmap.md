@@ -487,6 +487,48 @@ Over time the rule table becomes a perfect per-tenant merchant memory.
 
 ---
 
+## Phase 12 — App Hub + Day Context
+
+Solves two architectural questions: (1) how do apps communicate without requiring the CMS as orchestrator, and (2) how does a user switch between apps without a central launcher.
+
+**Model:** Peer-to-peer between apps — no CMS dependency. Each app queries others' APIs directly. The CMS is a peer, not a hub.
+
+**AppSwitcher:**
+- `packages/hub` library: `AppSwitcher` (floating ⊞ button, bottom-right), `HubSettings` (URL config form), `getHubConfig`/`setHubConfig` (localStorage)
+- Default apps: CMS (3001), Journal (3002), Music (3003), Maps (3004), Lifestyle (3005)
+- Current app highlighted in panel; one-click navigation between apps
+- Config stored in localStorage — configure once in CMS Settings → Connected Apps, works across all apps in same browser
+- AppSwitcher added to all five apps: journal, spotify, maps, habits, CMS
+
+**Day Context Panel:**
+- Appears inside journal entries (for existing entries, not new ones)
+- Shows a row of data pills for that day: habits completed, step count, spending total, journey count + distance, tracks played + artists
+- Fetches from `/habits/day-summary`, `/maps/day-summary`, `/spotify/day-summary` using `credentials: 'include'` (shared auth cookie)
+- Each summary endpoint checks which apps are enabled in hub config and shows only relevant pills
+- Falls back gracefully — shows nothing if an app isn't installed or has no data for that day
+
+**New API endpoints:**
+- `GET /habits/day-summary?date=YYYY-MM-DD` → habitsCompleted, habitsTotal, stepCount, spendingTotal
+- `GET /maps/day-summary?date=YYYY-MM-DD` → count, totalDistanceM, modes
+- `GET /spotify/day-summary?date=YYYY-MM-DD` → trackCount, artists
+
+**New DB query helpers:**
+- `getHabitsDaySummary(db, tenantId, date)` — queries habit_logs + transactions
+- `getJourneysDaySummary(db, tenantId, date)` — queries journeys by date
+- `getSpotifyDaySummary(db, tenantId, date)` — parses recently_played cache by date
+- `getJourneysByDate(db, tenantId, date)` — journeys for a specific calendar day
+
+- [x] `packages/hub` — AppSwitcher, HubSettings, config (localStorage), types
+- [x] Day summary endpoints on habits, maps, spotify routes
+- [x] `getHabitsDaySummary`, `getJourneysDaySummary`, `getSpotifyDaySummary`, `getJourneysByDate` query helpers
+- [x] `DayContextPanel` in `packages/journal`, wired into `JournalEditorPage`
+- [x] AppSwitcher integrated into all five apps
+- [x] HubSettings in CMS Settings → Connected Apps section
+
+**Done when:** opening a journal entry for a day shows that day's habits, steps, spending, travel, and music as context pills. The floating ⊞ button on every app lets you jump between apps instantly.
+
+---
+
 ## Future Phases (not yet scoped)
 
 - Additional connector adapters (Shopify, hospitality APIs, etc.)
@@ -520,3 +562,5 @@ Over time the rule table becomes a perfect per-tenant merchant memory.
 | Starling auth | Personal Access Token | 2026-03 | Personal tool — user generates token in Starling dev portal, pastes in Settings. No central app registration needed. |
 | Transaction categorisation | Rule-based learning (no AI) | 2026-03 | Merchant name → category rules per tenant, learned from user corrections. Starling's own category codes bootstrap first-time merchants. Gets accurate fast without any ML. |
 | Finance scope | Inside habits app, not separate | 2026-03 | Lifestyle and money are inseparable — one app, two tabs. Cleaner UX than a separate finance app. |
+| App launcher | AppSwitcher widget in every app (packages/hub) | 2026-03 | Apps sell independently — no central launcher required. Floating ⊞ button in each app; config in localStorage. CMS is a peer, not a hub. |
+| Day context | Journal queries other apps' APIs directly (peer-to-peer) | 2026-03 | Works without CMS. Journal's DayContextPanel calls /habits/day-summary, /maps/day-summary, /spotify/day-summary using shared session cookie. |

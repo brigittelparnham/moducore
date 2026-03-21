@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { AppSwitcher } from '@moducore/hub'
 
 const NAV_H = 52
 
@@ -111,6 +112,7 @@ export function AppShellLayout() {
       <main style={{ paddingTop: NAV_H }}>
         <Outlet />
       </main>
+      <AppSwitcher />
     </div>
   )
 }

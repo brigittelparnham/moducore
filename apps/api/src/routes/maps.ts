@@ -6,6 +6,7 @@ import {
   getKnownPlaces, upsertKnownPlace, deleteKnownPlace,
   getKnownRoutes, upsertKnownRoute,
   getJourneys, getJourney, labelJourney, getTodayJourneys,
+  getJourneysDaySummary,
 } from '@moducore/db'
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
@@ -57,6 +58,18 @@ mapsRoutes.post('/ingest', async (c) => {
   })
 
   return c.json({ ok: true })
+})
+
+// ─── Journeys ─────────────────────────────────────────────────────────────────
+
+// ─── Day summary (for cross-app DayContextPanel) ──────────────────────────────
+
+mapsRoutes.get('/day-summary', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  const date = c.req.query('date') ?? new Date().toISOString().slice(0, 10)
+  const summary = await getJourneysDaySummary(db, tenant.id, date)
+  return c.json(summary)
 })
 
 // ─── Journeys ─────────────────────────────────────────────────────────────────

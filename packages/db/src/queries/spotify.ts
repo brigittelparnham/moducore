@@ -122,6 +122,39 @@ export async function upsertSpotifyData(
     })
 }
 
+// ─── Day summary ──────────────────────────────────────────────────────────────
+
+export async function getSpotifyDaySummary(
+  db: DbClient,
+  tenantId: string,
+  date: string  // YYYY-MM-DD
+): Promise<{
+  date: string
+  trackCount: number
+  artists: string[]
+}> {
+  const cache = await getSpotifyData(db, tenantId, 'recently_played')
+  if (!cache) return { date, trackCount: 0, artists: [] }
+
+  type RecentItem = {
+    played_at: string
+    track: { name: string; artists: { name: string }[] }
+  }
+
+  const items = (cache.data as { items?: RecentItem[] })?.items ?? []
+  const dayItems = items.filter((item) => item.played_at?.startsWith(date))
+  const artistSet = new Set<string>()
+  for (const item of dayItems) {
+    for (const a of item.track?.artists ?? []) artistSet.add(a.name)
+  }
+
+  return {
+    date,
+    trackCount: dayItems.length,
+    artists: [...artistSet].slice(0, 3),
+  }
+}
+
 export async function getAllSpotifyDataForTenant(
   db: DbClient,
   tenantId: string

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { MapsProvider } from '@moducore/maps'
 import { MapsAppPage } from './pages/MapsAppPage'
+import { AppSwitcher } from '@moducore/hub'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const CMS_URL = import.meta.env.VITE_CMS_URL ?? 'http://localhost:3001'
@@ -29,6 +30,7 @@ export function App() {
             <Route path="/" element={<ProtectedRoute><MapsAppPage /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <AppSwitcher />
         </MapsProvider>
       </AuthProvider>
     </BrowserRouter>

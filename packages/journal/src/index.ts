@@ -1,4 +1,5 @@
 export { JournalProvider, useJournal } from './context'
 export { JournalListPage } from './components/JournalListPage'
 export { JournalEditorPage } from './components/JournalEditorPage'
+export { DayContextPanel } from './components/DayContextPanel'
 export type { JournalEntry } from './types'

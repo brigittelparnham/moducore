@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@moducore/core": "workspace:*",
+    "@moducore/hub": "workspace:*",
     "@moducore/journal": "workspace:^",
     "@moducore/ui": "workspace:*",
     "react": "^18.3.0",

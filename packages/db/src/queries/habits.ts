@@ -1,6 +1,7 @@
 import { eq, and, gte, lte, desc, sql, isNull } from 'drizzle-orm'
 import type { DbClient } from '../client'
 import { habits, habitTargets, habitLogs, rewards, pointsBalance } from '../schema/habits'
+import { transactions } from '../schema/finance'
 
 type DB = DbClient
 
@@ -290,4 +291,69 @@ function periodBoundsFromFreq(freq: string, ref: Date): { from: Date; to: Date }
   const from = new Date(d.getFullYear(), 0, 1)
   const to = new Date(d.getFullYear(), 11, 31, 23, 59, 59, 999)
   return { from, to }
+}
+
+// ─── Day summary ──────────────────────────────────────────────────────────────
+
+export async function getHabitsDaySummary(
+  db: DB,
+  tenantId: string,
+  date: string  // YYYY-MM-DD
+): Promise<{
+  date: string
+  habitsCompleted: number
+  habitsTotal: number
+  stepCount: number | null
+  spendingTotal: number | null
+}> {
+  const from = new Date(`${date}T00:00:00`)
+  const to = new Date(`${date}T23:59:59.999`)
+
+  const allHabits = await getHabits(db, tenantId)
+
+  // Count habits with at least one log on this date
+  const loggedIds = await db
+    .selectDistinct({ habitId: habitLogs.habitId })
+    .from(habitLogs)
+    .where(and(
+      eq(habitLogs.tenantId, tenantId),
+      gte(habitLogs.loggedAt, from),
+      lte(habitLogs.loggedAt, to),
+    ))
+  const habitsCompleted = loggedIds.length
+
+  // Step count from habits with unit='steps'
+  const stepHabits = allHabits.filter((h) => h.unit?.toLowerCase() === 'steps')
+  let stepCount = 0
+  for (const h of stepHabits) {
+    const result = await db
+      .select({ total: sql<string>`coalesce(sum(${habitLogs.value}), 0)` })
+      .from(habitLogs)
+      .where(and(
+        eq(habitLogs.tenantId, tenantId),
+        eq(habitLogs.habitId, h.id),
+        gte(habitLogs.loggedAt, from),
+        lte(habitLogs.loggedAt, to),
+      ))
+    stepCount += parseFloat(result[0]?.total ?? '0')
+  }
+
+  // Spending: sum of out-transactions (negative amounts) on this date
+  const spendResult = await db
+    .select({ total: sql<string>`coalesce(sum(${transactions.amount}), 0)` })
+    .from(transactions)
+    .where(and(
+      eq(transactions.tenantId, tenantId),
+      eq(transactions.date, date),
+      sql`${transactions.amount} < 0`,
+    ))
+  const spendingTotal = Math.abs(parseFloat(spendResult[0]?.total ?? '0'))
+
+  return {
+    date,
+    habitsCompleted,
+    habitsTotal: allHabits.length,
+    stepCount: stepCount > 0 ? stepCount : null,
+    spendingTotal: spendingTotal > 0 ? spendingTotal : null,
+  }
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SpotifyConnectPage } from './pages/SpotifyConnectPage'
 import { SpotifyDashboardPage } from './pages/SpotifyDashboardPage'
+import { AppSwitcher } from '@moducore/hub'
 
 const CMS_URL = import.meta.env.VITE_CMS_URL ?? 'http://localhost:3001'
 
@@ -28,6 +29,7 @@ export function App() {
           <Route path="/connect" element={<ProtectedRoute><SpotifyConnectPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <AppSwitcher />
       </AuthProvider>
     </BrowserRouter>
   )

@@ -10,6 +10,7 @@ import {
   disconnectSpotify,
   getSpotifyData,
   upsertSpotifyData,
+  getSpotifyDaySummary,
 } from '@moducore/db'
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
@@ -226,6 +227,15 @@ spotifyRoutes.get('/callback', async (c) => {
     console.error('[spotify] OAuth callback error:', e)
     return c.redirect(`${getSpotifyAppUrl()}?error=oauth_failed`)
   }
+})
+
+// GET /spotify/day-summary — for cross-app DayContextPanel
+spotifyRoutes.get('/day-summary', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  const date = c.req.query('date') ?? new Date().toISOString().slice(0, 10)
+  const summary = await getSpotifyDaySummary(db, tenant.id, date)
+  return c.json(summary)
 })
 
 // GET /spotify/data/:type — return cached data
