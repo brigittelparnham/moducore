@@ -2,15 +2,40 @@ import { useState, useEffect, useRef } from 'react'
 import { getHubConfig, getCurrentAppSlug } from '../config'
 import type { HubApp } from '../types'
 
-export function AppSwitcher() {
+type InstalledApp = { slug: string; installed: boolean }
+
+export function AppSwitcher({ apiBase }: { apiBase?: string }) {
   const [open, setOpen] = useState(false)
   const [apps, setApps] = useState<HubApp[]>([])
   const currentSlug = getCurrentAppSlug()
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setApps(getHubConfig().filter((a) => a.enabled))
-  }, [open])
+    const hubConfig = getHubConfig()
+
+    if (apiBase) {
+      // Fetch installed apps from the API, then filter hub config to only show installed ones
+      // Always include CMS (it's always "installed")
+      fetch(`${apiBase}/apps`, { credentials: 'include' })
+        .then((r) => r.ok ? r.json() as Promise<{ apps: InstalledApp[] }> : Promise.reject())
+        .then((data) => {
+          const installedSlugs = new Set(
+            data.apps.filter((a) => a.installed).map((a) => a.slug)
+          )
+          // Always show the current app + CMS + any installed apps
+          const visible = hubConfig.filter(
+            (a) => a.slug === 'cms' || a.slug === currentSlug || installedSlugs.has(a.slug)
+          )
+          setApps(visible)
+        })
+        .catch(() => {
+          // Fallback to localStorage if API unavailable
+          setApps(hubConfig.filter((a) => a.enabled))
+        })
+    } else {
+      setApps(hubConfig.filter((a) => a.enabled))
+    }
+  }, [open, apiBase, currentSlug])
 
   // Close on outside click
   useEffect(() => {

@@ -19,6 +19,8 @@ import { mapsRoutes } from './routes/maps'
 import { habitsRoutes } from './routes/habits'
 import { financeRoutes } from './routes/finance'
 import { starlingRoutes } from './routes/starling'
+import { siteConfigRoutes } from './routes/site-config'
+import { connectCodesRoutes } from './routes/connect-codes'
 import { startScheduler } from './scheduler'
 import type { AppVariables } from './types'
 
@@ -55,6 +57,8 @@ app.route('/maps', mapsRoutes)
 app.route('/habits', habitsRoutes)
 app.route('/finance', financeRoutes)
 app.route('/starling', starlingRoutes)
+app.route('/site-config', siteConfigRoutes)
+app.route('/connect-codes', connectCodesRoutes)
 
 // Serve uploaded files — accessible by CMS, journal, and external embeds
 app.use('/uploads/*', serveStatic({ root: './' }))

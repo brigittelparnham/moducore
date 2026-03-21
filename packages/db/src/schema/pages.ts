@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, uuid, jsonb } from 'drizzle-orm/pg-core'
 import { tenants } from './tenants'
 import { users } from './users'
+import type { PageStyle } from './site-config'
 
 export const pages = pgTable('pages', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -8,6 +9,7 @@ export const pages = pgTable('pages', {
   title: text('title').notNull(),
   slug: text('slug').notNull(),
   content: jsonb('content').notNull().default({}),
+  style: jsonb('style').$type<PageStyle>(),
   status: text('status', { enum: ['draft', 'published'] }).notNull().default('draft'),
   publishedAt: timestamp('published_at', { withTimezone: true }),
   createdBy: uuid('created_by').references(() => users.id),

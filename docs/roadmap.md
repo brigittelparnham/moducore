@@ -137,25 +137,25 @@ A music journal app: "what I listen to tells a story about me." Each tenant conn
 
 **Credentials model:** Each tenant pastes their own Spotify `client_id` + `client_secret` into CMS Settings. They register their own Spotify developer app and add the API callback URL as an allowed redirect URI. No central Spotify quota problem.
 
-- [ ] DB schema: `spotify_connections` (credentials + OAuth tokens, one per tenant) + `spotify_data_cache` (synced snapshots, unique per tenant+type)
-- [ ] Migration + query helpers
-- [ ] API routes (`/spotify/status`, `/spotify/credentials`, `/spotify/connect`, `/spotify/callback`, `/spotify/data/:type`, `/spotify/now-playing`, `/spotify/sync`)
-- [ ] OAuth flow: save state token → redirect to Spotify → callback exchanges code → stores tokens → redirects to apps/spotify
-- [ ] Token refresh: auto-refresh access token when expired (Spotify tokens expire in 1 hour)
-- [ ] Scheduler integration: sync top_tracks × 3 ranges, top_artists × 3 ranges, recently_played, audio_features every 15 min
-- [ ] `packages/spotify`: SpotifyProvider, createSpotifyApi, types, SpotifyDashboardPage
-- [ ] `apps/spotify` (port 3003): SpotifyConnectPage (enter credentials + OAuth), SpotifyDashboardPage
-- [ ] Visual components: NowPlaying, TopTracksCard (4wk/6mo/all-time toggle), TopArtistsCard
-- [ ] D3 charts: GenreChart (horizontal bar, genres derived from top artists), VibeBoard (radar: danceability/energy/valence/acousticness/instrumentalness)
-- [ ] CMS integration: Spotify section in Settings (credentials form + connect link + status); SpotifyFeedPage in CMS nav (last played + top 3 tracks, read-only)
-- [ ] Embed widgets: `<spotify-top-tracks>`, `<spotify-now-playing>`, `<spotify-genre-chart>` + public embed routes
-- [ ] Add to moducore.iife.js bundle
+- [x] DB schema: `spotify_connections` (credentials + OAuth tokens, one per tenant) + `spotify_data_cache` (synced snapshots, unique per tenant+type)
+- [x] Migration + query helpers
+- [x] API routes (`/spotify/status`, `/spotify/credentials`, `/spotify/connect`, `/spotify/callback`, `/spotify/data/:type`, `/spotify/now-playing`, `/spotify/sync`)
+- [x] OAuth flow: save state token → redirect to Spotify → callback exchanges code → stores tokens → redirects to apps/spotify
+- [x] Token refresh: auto-refresh access token when expired (Spotify tokens expire in 1 hour)
+- [x] Scheduler integration: sync top_tracks × 3 ranges, top_artists × 3 ranges, recently_played every 15 min (audio_features + genres not returned by Spotify for new dev apps)
+- [x] `packages/spotify`: SpotifyProvider, createSpotifyApi, types, SpotifyDashboardPage
+- [x] `apps/spotify` (port 3003): SpotifyConnectPage (enter credentials + OAuth), SpotifyDashboardPage
+- [x] Visual components: NowPlaying, TopTracksCard (4wk/6mo/all-time toggle), TopArtistsCard, ListeningHours (D3 bar), MusicEras (D3 bar)
+- [x] CMS integration: SpotifyFeedPage in CMS nav (last played + top 3 tracks, read-only)
+- [ ] Embed widgets: `<spotify-top-tracks>`, `<spotify-now-playing>` + public embed routes — deferred
 
 **Scopes:** `user-top-read user-read-recently-played user-read-currently-playing user-read-playback-state`
 
 **Env vars:** `SPOTIFY_APP_URL=http://localhost:3003` in apps/api/.env. Tenant credentials stored in DB (not env).
 
 **Done when:** tenant can connect Spotify, see their music journal dashboard, and embed widgets on an external site.
+
+**COMPLETE.** DB schema, OAuth flow, token refresh, 15-min sync scheduler, NowPlaying/TopTracksCard/TopArtistsCard/ListeningHours/MusicEras (D3) components, apps/spotify standalone (port 3003), CMS music feed + nav. Note: Spotify deprecated audio features + genres/popularity for new dev apps — those chart types removed.
 
 ---
 
@@ -485,6 +485,8 @@ Over time the rule table becomes a perfect per-tenant merchant memory.
 
 **Done when:** habits are being tracked with streaks → rewards unlock automatically → spending is being logged (manually + Starling sync) → categories are learning from corrections → budget progress is visible in the CMS lifestyle feed.
 
+**COMPLETE.** All 9 tables migrated (migration 0006 — run manually after docker up). Full habits/limits/rewards/points system, finance tracker with merchant auto-categorisation, Starling Bank sync (Personal Access Token, 15-min scheduler), iPhone Steps webhook + Shortcut instructions in Settings, packages/habits, apps/habits (port 3005), CMS lifestyle feed + nav + settings. 15/15 build clean.
+
 ---
 
 ## Phase 12 — App Hub + Day Context
@@ -527,6 +529,92 @@ Solves two architectural questions: (1) how do apps communicate without requirin
 
 **Done when:** opening a journal entry for a day shows that day's habits, steps, spending, travel, and music as context pills. The floating ⊞ button on every app lets you jump between apps instantly.
 
+**COMPLETE.** packages/hub (AppSwitcher, HubSettings, AppLoginScreen, config), day summary endpoints + query helpers, DayContextPanel in packages/journal, AppSwitcher on all 5 apps, HubSettings in CMS Settings → Connected Apps. 16/16 build clean.
+
+---
+
+## Phase 13 — CMS Editor Rebuild + Plugin Hub + Standalone Login + Site Config
+
+Completes the CMS as a first-class publishing tool and makes every app fully standalone.
+
+### Standalone login (complete)
+
+Each app now has its own login screen via `AppLoginScreen` from `packages/hub` — no longer requires CMS to sign in. Same email = same account. Signup still happens in CMS or any standalone app (creates user + tenant, auto-installs that app).
+
+- [x] `AppLoginScreen` component in packages/hub — shared login form, app-specific branding
+- [x] All 4 standalone apps (journal, spotify, maps, habits) updated with own login screen
+- [x] All 4 AuthContexts updated with `login`, `logout`, `refresh` methods
+
+### Plugin hub page (complete)
+
+Dedicated `/plugins` route in CMS replaces the scattered sections in Settings.
+
+- [x] `apps/cms/src/pages/PluginsPage.tsx` — app cards with install/uninstall + inline config panels
+- [x] `/plugins` route added to CMS routing
+- [x] "Plugins" nav link added to AppShellLayout
+- [x] Plugin-specific sections removed from SettingsPage (AppsSection, SpotifySection, MapsSection, HabitsSection)
+
+### Block page editor (complete)
+
+New pages use a structured block editor. Old HTML pages open in the legacy editor unchanged.
+
+- [x] `BlockEditor` component — 6 block types: Heading (H1/H2/H3 + align), Text (TipTap), Image (url/alt/width/align + media picker), Divider (solid/dashed/dotted), Button (label/href/variant/align), Spacer (height)
+- [x] @dnd-kit/core + @dnd-kit/sortable drag-and-drop block reordering
+- [x] Per-block style controls inline
+- [x] `PageEditorPage` updated — new pages use BlockEditor, existing HTML pages use legacy RichTextEditor
+- [x] `PublicPageView` updated — renders blocks natively, falls back to HTML/text for legacy pages
+
+### Code block (complete)
+
+- [x] Code block type in BlockEditor — dark-themed textarea, language selector (TypeScript/JS/Python/Bash/SQL/JSON/HTML/CSS/Rust/Go/plaintext), renders as `<pre><code>` in public view
+
+### AppSwitcher — show only installed apps (complete)
+
+- [x] AppSwitcher accepts `apiBase` prop; fetches `/apps` to get installed slugs and filters hub config accordingly
+- [x] Always shows CMS and current app regardless; falls back to localStorage if API unavailable
+- [x] All 5 apps pass `apiBase={API_URL}` to AppSwitcher
+
+### Account model + explicit app activation (complete)
+
+- [x] Visiting an app with a valid session but that app not yet activated → `AppActivationScreen` prompt: "Activate [App] on your moducore account?"
+- [x] One-click activation calls `POST /apps/:slug/install`; "Use a different account" triggers logout
+- [x] Sign up on any standalone app creates user + tenant + auto-installs that app (`appSlug` param on `/auth/signup`)
+- [x] Same email across apps = same account (shared users table)
+- [x] `AppLoginScreen` signup mode added — name, email, password, workspace name/slug, auto-slugify
+
+### Cross-app connect codes (complete)
+
+- [x] `app_link_tokens` table — `grantingTenantId`, `appSlug`, `token` (6-char uppercase), `grantedToTenantId`, `expiresAt`, `grantedAt`
+- [x] `POST /connect-codes/generate` — generates code, 15-min expiry, invalidates prior unused codes for same tenant+app
+- [x] `POST /connect-codes/consume` — validates and links code to consuming tenant; rejects self-links and expired codes
+- [x] `GET /connect-codes/links` — lists granted and received links
+- [x] `ConnectCodesSection` in CMS Settings — generate code per app, consume input for received codes
+
+### Site config — global + per-page (complete)
+
+- [x] `site_configs` table: `siteName`, `logoUrl`, `accentColor`, `fontFamily`, `navLinks` (jsonb), `headerBlocks` (jsonb), `footerBlocks` (jsonb), unique per tenant
+- [x] `style` jsonb column on `pages`: per-page overrides (accentColor, backgroundColor, fontFamily, maxWidth, showHeader, showFooter, showNav)
+- [x] Migration 0007 (`site_configs`, `pages.style`, `app_link_tokens`)
+- [x] `getSiteConfig` + `upsertSiteConfig` query helpers in `packages/db`
+- [x] `GET/PATCH /site-config` (authenticated) + `GET /site-config/public/:tenantSlug` (public)
+- [x] `/site` route in CMS — 4-tab editor: Branding (name/logo/accent/font with live preview), Navigation (nav links), Header (BlockEditor), Footer (BlockEditor)
+- [x] Public pages wrapped in site shell — header blocks → nav bar (logo + links) → content → footer blocks; per-page overrides applied on top
+- [x] Per-page style panel in PageEditorPage — accent colour, background colour, max-width, show/hide header/footer/nav toggles
+
+### Landing app (complete)
+
+- [x] `apps/home` (port 3006) — marketing/landing site, no auth required
+- [x] Hero section with headline + "Start for free" CTA → CMS signup
+- [x] App cards for moducore, Journal, Music, Travel, Lifestyle — icon, tagline, description, hover effect, "Get started" link
+- [x] Env vars for each app URL with localhost defaults; sticky header with sign-in link
+- [x] Standalone, no API dependency
+
+---
+
+**Done when:** every app has its own login screen, connect codes link apps across accounts, the CMS site editor controls global branding + nav + header/footer, and published pages render inside the configured site shell.
+
+**COMPLETE.** Code block in BlockEditor, AppSwitcher reads from API, AppLoginScreen signup mode, AppActivationScreen, connect codes (generate/consume/links), site_configs table + migration 0007, site config editor (/site, 4 tabs), public page shell, per-page style panel, ConnectCodesSection in Settings, apps/home landing site (port 3006). 17/17 build clean.
+
 ---
 
 ## Future Phases (not yet scoped)
@@ -564,3 +652,10 @@ Solves two architectural questions: (1) how do apps communicate without requirin
 | Finance scope | Inside habits app, not separate | 2026-03 | Lifestyle and money are inseparable — one app, two tabs. Cleaner UX than a separate finance app. |
 | App launcher | AppSwitcher widget in every app (packages/hub) | 2026-03 | Apps sell independently — no central launcher required. Floating ⊞ button in each app; config in localStorage. CMS is a peer, not a hub. |
 | Day context | Journal queries other apps' APIs directly (peer-to-peer) | 2026-03 | Works without CMS. Journal's DayContextPanel calls /habits/day-summary, /maps/day-summary, /spotify/day-summary using shared session cookie. |
+| Plugin hub | Dedicated /plugins page in CMS, not Settings sections | 2026-03 | Cleaner UX — install/configure in one place. Settings keeps workspace, embeds, connectors only. |
+| Block editor migration | New pages only, existing pages untouched | 2026-03 | "Start clean" — no migration of old HTML content. Legacy editor still used for old pages. |
+| Account model | Email = identity across all apps; same email = same account | 2026-03 | One user table shared. Sign up on any app creates user + tenant. Same email on another app links to existing account. No per-app passwords. |
+| App activation | Explicit opt-in prompt when visiting app with existing session | 2026-03 | Shared cookie silently logged you in — too invisible. Show prompt so user intentionally connects the app to their account. |
+| Cross-app data auth | Connect codes (short-lived tokens) | 2026-03 | More deliberate than silent shared cookie. User generates code in source app, pastes in target. Feels like a real integration. |
+| Site config | Global defaults + per-page overrides | 2026-03 | Global: header/footer/nav/palette. Per-page: can override any global style and show/hide shell. |
+| Landing site | apps/home (port 3006), static, no auth | 2026-03 | Marketing entry point for all apps. Standalone — no API dependency. |

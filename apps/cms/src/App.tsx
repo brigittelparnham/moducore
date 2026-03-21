@@ -11,6 +11,8 @@ import { PagesPage } from './pages/PagesPage'
 import { PageEditorPage } from './pages/PageEditorPage'
 import { PublicPageView } from './pages/PublicPageView'
 import { SettingsPage } from './pages/SettingsPage'
+import { PluginsPage } from './pages/PluginsPage'
+import { SiteConfigPage } from './pages/SiteConfigPage'
 import { JournalFeedPage } from './pages/JournalFeedPage'
 import { SpotifyFeedPage } from './pages/SpotifyFeedPage'
 import { MapsFeedPage } from './pages/MapsFeedPage'
@@ -45,6 +47,8 @@ export function App() {
             <Route path="/travel" element={<MapsFeedPage />} />
             <Route path="/lifestyle" element={<LifestyleFeedPage />} />
             <Route path="/media" element={<MediaPage />} />
+            <Route path="/plugins" element={<PluginsPage />} />
+            <Route path="/site" element={<SiteConfigPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 

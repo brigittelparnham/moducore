@@ -1,4 +1,4 @@
-import { eq, and, lt, gte, lte, desc, asc, sql } from 'drizzle-orm'
+import { eq, and, lt, gte, lte, desc, asc } from 'drizzle-orm'
 import type { DbClient } from '../client'
 import {
   locationPings, knownPlaces, knownRoutes, journeys,

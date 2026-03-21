@@ -1,4 +1,6 @@
 export { AppSwitcher } from './components/AppSwitcher'
 export { HubSettings } from './components/HubSettings'
+export { AppLoginScreen } from './components/AppLoginScreen'
+export { AppActivationScreen } from './components/AppActivationScreen'
 export { getHubConfig, setHubConfig, getAppUrl, getCurrentAppSlug, DEFAULT_APPS } from './config'
 export type { HubApp, AppSlug, DaySummary } from './types'

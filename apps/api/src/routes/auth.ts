@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { setCookie, deleteCookie } from 'hono/cookie'
-import { users, tenants, tenantMembers, createSession, isTenantSlugAvailable, getUserByEmail, getUserByResetToken, setPasswordResetToken, updateUserPassword } from '@moducore/db'
+import { users, tenants, tenantMembers, createSession, isTenantSlugAvailable, getUserByEmail, getUserByResetToken, setPasswordResetToken, updateUserPassword, installApp } from '@moducore/db'
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@moducore/core'
 import { hashPassword, verifyPassword, generateToken } from '../lib/crypto'
 import { sendWelcomeEmail, sendPasswordResetEmail } from '../lib/email'
@@ -45,7 +45,7 @@ async function createAndSetSession(
 // POST /auth/signup
 authRoutes.post('/signup', zValidator('json', signupSchema), async (c) => {
   const db = getDb()
-  const { name, email, password, tenantName, tenantSlug } = c.req.valid('json')
+  const { name, email, password, tenantName, tenantSlug, appSlug } = c.req.valid('json')
 
   const existing = await db.query.users.findFirst({
     where: (u, { eq }) => eq(u.email, email.toLowerCase()),
@@ -65,6 +65,9 @@ authRoutes.post('/signup', zValidator('json', signupSchema), async (c) => {
       .returning()
     const [tenant] = await tx.insert(tenants).values({ name: tenantName, slug: tenantSlug }).returning()
     await tx.insert(tenantMembers).values({ userId: user.id, tenantId: tenant.id, role: 'owner' })
+    if (appSlug) {
+      await installApp(tx, tenant.id, appSlug)
+    }
     return { user, tenant }
   })
 

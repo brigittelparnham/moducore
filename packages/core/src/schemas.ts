@@ -21,6 +21,7 @@ export const signupSchema = z.object({
     .min(2, 'Slug must be at least 2 characters')
     .max(30, 'Slug must be at most 30 characters')
     .regex(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens'),
+  appSlug: z.string().optional(), // when signing up from a standalone app, auto-install it
 })
 
 export const loginSchema = z.object({

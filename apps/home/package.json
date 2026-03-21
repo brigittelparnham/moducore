@@ -1,25 +1,17 @@
 {
-  "name": "@moducore/cms",
+  "name": "@moducore/home",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3001",
+    "dev": "vite --port 3006",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint src"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@moducore/core": "workspace:*",
-    "@moducore/hub": "workspace:*",
-    "@moducore/journal": "workspace:^",
-    "@moducore/ui": "workspace:*",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "react-router-dom": "^6.27.0"
+    "react-dom": "^18.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

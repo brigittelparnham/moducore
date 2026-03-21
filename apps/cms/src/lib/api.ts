@@ -61,11 +61,11 @@ export const api = {
   pages: {
     list: () => request<{ pages: Page[] }>('/pages'),
     get: (id: string) => request<{ page: Page }>(`/pages/${id}`),
-    create: (body: { title: string; slug: string; content: Record<string, unknown> }) =>
+    create: (body: { title: string; slug: string; content: Record<string, unknown>; style?: Record<string, unknown> }) =>
       request<{ page: Page }>('/pages', { method: 'POST', body: JSON.stringify(body) }),
     update: (
       id: string,
-      body: Partial<{ title: string; slug: string; content: Record<string, unknown> }>
+      body: Partial<{ title: string; slug: string; content: Record<string, unknown>; style: Record<string, unknown> }>
     ) => request<{ page: Page }>(`/pages/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     publish: (id: string) => request<{ page: Page }>(`/pages/${id}/publish`, { method: 'POST' }),
     unpublish: (id: string) =>

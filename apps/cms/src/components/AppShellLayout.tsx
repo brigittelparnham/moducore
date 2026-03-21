@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { AppSwitcher } from '@moducore/hub'
 
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const NAV_H = 52
 
 export function AppShellLayout() {
@@ -33,6 +34,8 @@ export function AppShellLayout() {
     ...(installedSlugs.has('maps') ? [{ to: '/travel', label: 'Travel' }] : []),
     ...(installedSlugs.has('habits') ? [{ to: '/lifestyle', label: 'Lifestyle' }] : []),
     { to: '/media', label: 'Media' },
+    { to: '/plugins', label: 'Plugins' },
+    { to: '/site', label: 'Site' },
     { to: '/settings', label: 'Settings' },
   ]
 
@@ -112,7 +115,7 @@ export function AppShellLayout() {
       <main style={{ paddingTop: NAV_H }}>
         <Outlet />
       </main>
-      <AppSwitcher />
+      <AppSwitcher apiBase={API_URL} />
     </div>
   )
 }

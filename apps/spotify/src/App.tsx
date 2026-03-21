@@ -1,20 +1,51 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SpotifyConnectPage } from './pages/SpotifyConnectPage'
 import { SpotifyDashboardPage } from './pages/SpotifyDashboardPage'
-import { AppSwitcher } from '@moducore/hub'
+import { AppSwitcher, AppLoginScreen, AppActivationScreen } from '@moducore/hub'
 
-const CMS_URL = import.meta.env.VITE_CMS_URL ?? 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
-  if (isLoading) return <p style={{ padding: 40, color: '#666' }}>Loading…</p>
+  const { user, isLoading, refresh, logout } = useAuth()
+  const [appInstalled, setAppInstalled] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!user) { setAppInstalled(null); return }
+    fetch(`${API_URL}/apps`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d: { apps: { slug: string; installed: boolean }[] }) => {
+        setAppInstalled(d.apps.some((a) => a.slug === 'spotify' && a.installed))
+      })
+      .catch(() => setAppInstalled(true))
+  }, [user])
+
+  if (isLoading || (user && appInstalled === null)) return <p style={{ padding: 40, color: '#666' }}>Loading…</p>
   if (!user) {
     return (
-      <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 16px', textAlign: 'center' }}>
-        <p>Please log in via the CMS to access your music journal.</p>
-        <a href={CMS_URL} style={{ color: '#1DB954' }}>Go to CMS →</a>
-      </div>
+      <AppLoginScreen
+        appName="Music"
+        appIcon="🎵"
+        accentColor="#1DB954"
+        apiBase={API_URL}
+        appSlug="spotify"
+        onLogin={refresh}
+      />
+    )
+  }
+  if (!appInstalled) {
+    return (
+      <AppActivationScreen
+        appName="Music"
+        appIcon="🎵"
+        accentColor="#1DB954"
+        apiBase={API_URL}
+        appSlug="spotify"
+        userName={user.name}
+        onActivated={refresh}
+        onSwitchAccount={async () => { await logout(); refresh() }}
+      />
     )
   }
   return <>{children}</>
@@ -29,7 +60,7 @@ export function App() {
           <Route path="/connect" element={<ProtectedRoute><SpotifyConnectPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <AppSwitcher />
+        <AppSwitcher apiBase={API_URL} />
       </AuthProvider>
     </BrowserRouter>
   )
