@@ -15,6 +15,10 @@ import { connectorsRoutes } from './routes/connectors'
 import { mediaRoutes } from './routes/media'
 import { tenantsRoutes } from './routes/tenants'
 import { spotifyRoutes } from './routes/spotify'
+import { mapsRoutes } from './routes/maps'
+import { habitsRoutes } from './routes/habits'
+import { financeRoutes } from './routes/finance'
+import { starlingRoutes } from './routes/starling'
 import { startScheduler } from './scheduler'
 import type { AppVariables } from './types'
 
@@ -27,6 +31,8 @@ app.use(
       process.env.CMS_URL ?? 'http://localhost:3001',
       process.env.JOURNAL_URL ?? 'http://localhost:3002',
       process.env.SPOTIFY_APP_URL ?? 'http://localhost:3003',
+      process.env.MAPS_APP_URL ?? 'http://localhost:3004',
+      process.env.HABITS_APP_URL ?? 'http://localhost:3005',
     ],
     credentials: true,
   })
@@ -45,6 +51,10 @@ app.route('/connectors', connectorsRoutes)
 app.route('/media', mediaRoutes)
 app.route('/tenants', tenantsRoutes)
 app.route('/spotify', spotifyRoutes)
+app.route('/maps', mapsRoutes)
+app.route('/habits', habitsRoutes)
+app.route('/finance', financeRoutes)
+app.route('/starling', starlingRoutes)
 
 // Serve uploaded files — accessible by CMS, journal, and external embeds
 app.use('/uploads/*', serveStatic({ root: './' }))

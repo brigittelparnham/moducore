@@ -159,6 +159,334 @@ A music journal app: "what I listen to tells a story about me." Each tenant conn
 
 ---
 
+## Phase 10 — Maps & Commute Intelligence
+
+A personal travel journal: "where I go and how I get there tells a story about me." Tracks real journeys via OwnTracks (iOS/Android background GPS app), detects trips automatically, and builds up a personal baseline for route times. Combines that historical data with live TfL conditions and weather to give smarter route suggestions than Google Maps — because it knows *your* actual pace and *your* actual routes.
+
+**Model:** Same plugin pattern — `apps/maps` (standalone, port 3004) + `packages/maps` (shared components). CMS shows a travel feed. OwnTracks is the tracking layer (no native app needed — configure it to POST to the moducore API).
+
+**Three suggestion modes (all built from the same data):**
+1. **Passive / historical** — "Your Tuesday commute averages 41 min. You're fastest leaving between 8:15–8:30am."
+2. **Active / live** — "Right now: Jubilee line suspended. TfL estimates your usual route at 54 min."
+3. **Combined** — "Your usual route is disrupted today (+13 min). When this happened before, you took bus 168 + walk — that averaged 38 min vs your usual 41. Bus 168 is running normally right now."
+
+The combined mode learns *which alternatives you actually use* when disrupted, and how long they took you — not just what TfL estimates.
+
+**Context:** London, iOS, walking + public transit + cycling. No cars. TfL API (free, requires app key). Open-Meteo for weather (free, no key).
+
+---
+
+### Data model
+
+```
+location_pings         — raw OwnTracks pings
+  id, tenant_id, lat, lon, accuracy_m, velocity_ms, altitude_m, battery_pct,
+  recorded_at (from OwnTracks tst), received_at, processed (bool)
+
+journeys               — detected trips, one row per trip
+  id, tenant_id, started_at, ended_at,
+  origin_lat, origin_lon, dest_lat, dest_lon,
+  distance_m, duration_s,
+  mode (walking|cycling|transit|mixed),
+  tfl_estimated_s,          -- TfL Journey Planner result at time of trip
+  tfl_route (jsonb),        -- lines/legs TfL suggested
+  weather_summary (jsonb),  -- Open-Meteo snapshot at trip start
+  ping_ids (int[]),         -- FK to location_pings used to build this journey
+  route_id (uuid, nullable) -- FK to known_routes if matched
+
+known_routes           — named routes the user defines or the system learns
+  id, tenant_id, name (e.g. "Home → Work"),
+  origin_lat, origin_lon, dest_lat, dest_lon,
+  typical_duration_s,       -- rolling average of actual journey durations
+  personal_ratio,           -- user's actual time ÷ TfL estimate (updated on each journey)
+  journey_count
+
+known_places           — named locations (home, work, gym, etc.)
+  id, tenant_id, name, lat, lon, radius_m
+```
+
+---
+
+### Journey detection (scheduler, every 5 min)
+
+1. Find unprocessed pings ordered by `recorded_at`
+2. Split into journeys: gap of > 5 min without movement (< 20m displacement) = journey boundary
+3. For each journey segment:
+   - Calculate total distance (Haversine between consecutive pings)
+   - Calculate avg speed → infer mode: < 4 km/h = walking, < 25 km/h = cycling, > 25 km/h = transit
+   - Match origin/dest to `known_places` (within radius)
+   - Call TfL Journey Planner for origin→dest at `started_at` time (async, best-effort)
+   - Fetch Open-Meteo for origin coords + started_at (async, best-effort)
+   - Upsert `journeys` row; mark pings as processed
+4. Update `known_routes.typical_duration_s` + `personal_ratio` rolling average
+
+---
+
+### Suggestion engine (called live, on demand)
+
+Input: current location (lat/lon) + destination (lat/lon or known place name)
+
+```
+score(route_option) =
+  tfl_estimate_s
+  × personal_ratio          // your historical ratio vs TfL (e.g. 0.88 = you're faster)
+  × disruption_multiplier   // 1.0 = clear, 1.3+ = delays, 2.0 = suspended
+  × weather_factor          // rain: cycling +20%, walking +10%, transit unchanged
+```
+
+Returns ordered list of route options with:
+- Estimated time (personalised)
+- Confidence ("strong" = 10+ journeys, "early" = < 5, "live only" = no history)
+- Disruption warnings for each line used
+- Callout if an alternative route performs better historically under today's conditions
+
+---
+
+### API routes (`apps/api/src/routes/maps.ts`)
+
+```
+POST /location/ingest               — OwnTracks webhook (no auth, validated by secret token in URL)
+GET  /journeys                      — list journeys (requireAuth, paginated)
+GET  /journeys/:id                  — single journey with full ping trace
+GET  /routes                        — list known routes + stats
+POST /routes                        — create/name a route
+GET  /places                        — list known places
+POST /places                        — create/name a place
+GET  /suggest?from=lat,lon&to=lat,lon — live route suggestions (requireAuth)
+POST /journeys/:id/label            — label a journey with a route name
+```
+
+---
+
+### `packages/maps` components
+
+- **`MapView`** — Leaflet map (OpenStreetMap tiles, no API key) rendering a journey polyline
+- **`JourneyList`** — scrollable list of trips, actual vs TfL time, mode icon
+- **`JourneyCard`** — single trip: map thumbnail, duration, mode, disruption note
+- **`SuggestPanel`** — the active suggestion screen: shows ranked route options with live conditions + personal history callout
+- **`CommuteStats`** — passive historical view: avg times by day of week, best departure windows, personal ratio vs TfL
+
+---
+
+### `apps/maps` (port 3004)
+
+- `/` — today's journeys + SuggestPanel for next trip (detects current location)
+- `/journeys` — full journey history with filters
+- `/routes` — named routes + stats per route
+- `/settings` — known places (home, work, etc.), TfL API key
+
+---
+
+### CMS integration
+
+- **Maps feed page** (`/travel`) — today's journeys, commute streak, "Open Maps →" link
+- Shown in nav when maps app is installed
+
+---
+
+### External APIs
+
+| API | Purpose | Auth | Cost |
+|---|---|---|---|
+| TfL Unified API | Journey Planner, line status, disruptions | App key (query param) | Free |
+| Open-Meteo | Weather at journey time | None | Free |
+| OpenStreetMap / Leaflet | Map tiles + display | None | Free |
+
+TfL app key stored in `apps/api/.env` as `TFL_APP_KEY`. Not per-tenant — this is personal data for a single user.
+
+---
+
+### OwnTracks setup (tenant does this once)
+
+1. Install OwnTracks from App Store
+2. Settings → Connection → Mode: **HTTP**
+3. URL: `https://YOUR_API/location/ingest?secret=YOUR_SECRET_TOKEN`
+4. Auth: none (secret is in URL)
+5. Reporting interval: every 10s when moving, every 5 min when stationary
+
+A `LOCATION_INGEST_SECRET` env var gates the ingest endpoint.
+
+---
+
+### Build sequence
+
+1. DB schema + migration (4 tables)
+2. OwnTracks ingest endpoint (`POST /location/ingest`)
+3. Journey detection scheduler job
+4. Known places + named routes API
+5. TfL + Open-Meteo integration helpers
+6. Suggestion engine
+7. `packages/maps` — MapView (Leaflet), JourneyList, JourneyCard
+8. `apps/maps` — journey history + suggest panel
+9. CommuteStats passive view
+10. CMS integration — travel feed page + nav
+11. `turbo build` clean
+
+---
+
+**Done when:** OwnTracks is sending pings → journeys are detected automatically → the suggestion screen shows personalised route options combining historical data with live TfL conditions and weather.
+
+**COMPLETE.** DB schema (4 tables), OwnTracks ingest endpoint, journey detection scheduler (5-min), TfL + Open-Meteo helpers, suggestion engine, `packages/maps` (MapView/Leaflet, JourneyCard, JourneyList, SuggestPanel, CommuteStats, MapsDashboardPage), `apps/maps` (port 3004), CMS travel feed + nav + settings section. 13/13 build clean.
+
+---
+
+## Phase 11 — Habits & Lifestyle Tracker
+
+A full lifestyle tracker: habits you want to build, limits you want to respect, rewards you earn, and a personal finance layer that ties it all together. "Only 2 takeaways this month → unlocks £50 to spend on something." Tracks daily, weekly, monthly, and yearly — one habit can have targets at all scales simultaneously.
+
+**Model:** Same plugin pattern — `apps/habits` (standalone, port 3005) + `packages/habits` (shared components). CMS shows a lifestyle feed. Finance sits inside the habits app (not a separate app — lifestyle and money are inseparable).
+
+**Three layers:**
+1. **Habits** — things to do more of. Each habit can have a daily, weekly, monthly, and yearly target simultaneously. Streak tracking per time scale. Each log can earn points.
+2. **Limits** — things to cap. "Max 2 takeaways/month." Uses the same habit/target model with `target_type: max`. Staying within a limit can unlock a specific reward.
+3. **Finance** — personal spending tracker. Manual accounts + Starling bank sync. Auto-categorises transactions by learning from per-tenant merchant→category corrections (no AI — rule-based string matching, gets smarter as you correct it). Budget rules per category. CSV import for history.
+
+**Reward system (hybrid):**
+- Some habits earn **points** per log (e.g., each workout = 10 pts). Points are spent on point-cost rewards.
+- Some habits/limits trigger **condition unlocks** (e.g., "stay within takeaway limit for November → £50 shopping unlocked").
+- Both use the same `rewards` table — different `reward_type`.
+
+**Starling integration:** Personal Access Token (user generates in Starling developer portal, pastes into Settings). Syncs current account + savings spaces on the existing 15-min scheduler. Starling's own category codes bootstrap auto-categorisation on first import.
+
+**iPhone Steps:** `POST /habits/health-ingest?secret=TOKEN` endpoint. Settings page outputs the exact iOS Shortcut configuration (JSON + instructions) the user sets up once — runs nightly, reads step count from Apple Health, POSTs to the API.
+
+---
+
+### Data model
+
+```
+habits              — name, icon, color, unit, type (habit|limit), points_per_log, archived
+habit_targets       — habit_id, frequency (daily|weekly|monthly|yearly), target_value, target_type (min|max)
+habit_logs          — habit_id, value, logged_at, source (manual|health_shortcut|bank_auto)
+rewards             — name, type (unlock|points_spend), points_cost, condition_habit_id,
+                      condition_frequency, earned_at, redeemed_at, monetary_value
+points_balance      — ledger (delta per event, reason, ref_id)
+
+accounts            — name, type (current|savings|cash|credit|investment), starting_balance,
+                      starting_balance_date, provider (manual|starling), starling_account_uid,
+                      starling_access_token
+categories          — name, icon, color, type (income|expense|transfer), linked_habit_id
+merchant_rules      — tenant_id, merchant_pattern (lowercase fragment), category_id, match_count
+transactions        — account_id, amount (positive=in, negative=out), description, merchant,
+                      category_id, category_confirmed, date, source (manual|starling_import|csv_import),
+                      external_id (dedup)
+budget_rules        — category_id, period (weekly|monthly|yearly), limit_amount
+```
+
+---
+
+### API routes
+
+```
+POST /habits/health-ingest?secret=   — iPhone Shortcut webhook (public, secret-gated)
+GET/POST   /habits                   — list / create habits
+GET/PATCH/DELETE /habits/:id         — single habit
+GET/POST   /habits/:id/targets       — manage time-scale targets
+POST       /habits/:id/log           — log a value (triggers points + reward checks)
+GET        /habits/:id/logs          — log history
+GET        /habits/streaks           — all streaks, current + best
+
+GET/POST   /rewards                  — list / create rewards
+POST       /rewards/:id/redeem       — redeem a reward
+GET        /points                   — current balance + recent ledger
+
+GET/POST   /accounts                 — list / create accounts
+GET        /accounts/:id/balance     — running balance (starting + transactions)
+GET/POST   /accounts/:id/transactions — list (paginated) / create transaction
+POST       /accounts/:id/import      — bulk import (CSV parsed client-side, POSTed as JSON)
+GET/POST   /categories               — list / create categories
+GET        /merchant-rules           — per-tenant learned rules
+PATCH      /transactions/:id         — update (confirm/correct category → updates rules)
+
+GET        /budget                   — all rules + actuals for current period
+POST       /starling/connect         — save Personal Access Token + kick off first sync
+POST       /starling/sync            — manual sync trigger
+GET        /starling/status          — connection status + last synced
+```
+
+---
+
+### Auto-categorisation (no AI)
+
+1. Transaction arrives (manual or Starling import)
+2. Normalize merchant: lowercase, strip `Ltd/Limited/UK/PLC`, trim
+3. Look up `merchant_rules` for this tenant — exact match first, then substring scan
+4. Assign suggested category (`category_confirmed = false`)
+5. User confirms → `category_confirmed = true`, increment `match_count` on rule
+6. User corrects → upsert rule with new category, `match_count = 1`
+7. Starling's own `spendingCategory` field used as fallback for first-time merchants (mapped to system categories)
+
+Over time the rule table becomes a perfect per-tenant merchant memory.
+
+---
+
+### `packages/habits` components
+
+- **HabitCard** — habit name, today's progress bar, streak badge, quick-log button
+- **HabitLogForm** — quick-add modal (value + optional note, date defaults today)
+- **StreakBadge** — flame icon + count, per frequency
+- **TargetRing** — circular progress for a single time-scale target
+- **RewardCard** — reward name, condition, status (locked/earned/redeemed)
+- **PointsWidget** — current balance, recent earned/spent
+- **AccountCard** — account name, current balance, last synced
+- **TransactionRow** — amount, merchant, category pill (tappable to correct), date
+- **TransactionForm** — quick-add: amount (in/out toggle), category, description, date (defaults today)
+- **BudgetProgress** — category, spent vs limit, progress bar, over/under indicator
+- **LifestyleDashboard** — today tab (habits due + points + recent transactions), finance tab
+
+---
+
+### `apps/habits` pages (port 3005)
+
+- `/` — today dashboard: habits due, streak summary, points balance, recent transactions
+- `/habits` — full habit list + manage targets
+- `/log` — quick-log screen (one tap per habit)
+- `/rewards` — earned + available + redeemed
+- `/finance` — accounts overview + recent transactions across all accounts
+- `/finance/:accountId` — account detail + transaction history + running balance chart
+- `/budget` — budget rules vs actuals, by category + period
+- `/settings` — Starling connect, health ingest token + Shortcut instructions
+
+---
+
+### CMS integration
+
+- **Lifestyle feed** (`/lifestyle`) — today's habit completion %, points balance, last 3 transactions, "Open Habits →"
+- Shown in nav when habits app is installed
+- Settings → Habits section (install/uninstall trigger)
+
+---
+
+### External integrations
+
+| Integration | Purpose | Auth | Notes |
+|---|---|---|---|
+| Starling Bank API | Transaction sync, account balance, savings spaces | Personal Access Token | User generates at developer.starlingbank.com |
+| Apple Health (via Shortcuts) | Daily step count | Secret token in URL | One-time Shortcut setup, instructions in app |
+
+---
+
+### Build sequence
+
+1. DB schema + migration (9 tables)
+2. Habits CRUD + logging + streak calculation
+3. Points ledger + reward unlock logic (auto-fires on every log)
+4. Finance: accounts + categories + transactions + budget rules
+5. Merchant auto-categorisation (rule engine + learning)
+6. CSV import (client-side parse → POST)
+7. Starling Personal Access Token sync (scheduler integration)
+8. Health ingest endpoint + Shortcut config generator
+9. `packages/habits` — all components
+10. `apps/habits` — all pages
+11. CMS lifestyle feed page + nav + settings
+12. `turbo build` clean
+
+---
+
+**Done when:** habits are being tracked with streaks → rewards unlock automatically → spending is being logged (manually + Starling sync) → categories are learning from corrections → budget progress is visible in the CMS lifestyle feed.
+
+---
+
 ## Future Phases (not yet scoped)
 
 - Additional connector adapters (Shopify, hospitality APIs, etc.)
@@ -186,3 +514,9 @@ A music journal app: "what I listen to tells a story about me." Each tenant conn
 | App composition | Plugin / connected feed | 2026-03 | Secondary apps author independently; CMS shows read-only feed with links back. CMS never duplicates editor UI. |
 | Spotify credentials | Tenant-owned (each tenant brings their own client_id/secret) | 2026-03 | Avoids central Spotify dev quota (5 users in dev mode). Aligns with self-hosted ethos. Tenants register their own Spotify developer app. |
 | Spotify charts | D3 (not Recharts) | 2026-03 | Full control over bespoke visual styling for the music journal aesthetic. |
+| Habits: limits naming | "Limits" not "punishments" | 2026-03 | Positive framing — you're setting a boundary, not punishing yourself. |
+| Habits: reward model | Hybrid (points + condition unlocks) | 2026-03 | Some habits earn points (spent on any reward), others trigger specific unlocks (e.g. stay within takeaway limit → £50 shopping). |
+| Habits: time scales | Multi-target per habit | 2026-03 | One habit can have daily + weekly + monthly + yearly targets simultaneously. Log once, checked against all scales. |
+| Starling auth | Personal Access Token | 2026-03 | Personal tool — user generates token in Starling dev portal, pastes in Settings. No central app registration needed. |
+| Transaction categorisation | Rule-based learning (no AI) | 2026-03 | Merchant name → category rules per tenant, learned from user corrections. Starling's own category codes bootstrap first-time merchants. Gets accurate fast without any ML. |
+| Finance scope | Inside habits app, not separate | 2026-03 | Lifestyle and money are inseparable — one app, two tabs. Cleaner UX than a separate finance app. |

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type AvailableApp, type EmbedToken, type ConnectorRow, type Tenant, type SpotifyStatus } from '../lib/api'
 
 const SPOTIFY_APP_URL = import.meta.env.VITE_SPOTIFY_URL ?? 'http://localhost:3003'
+const API_URL_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export function SettingsPage() {
   return (
@@ -13,6 +14,8 @@ export function SettingsPage() {
         <AppsSection />
       </div>
       <SpotifySection />
+      <MapsSection />
+      <HabitsSection />
       <div style={{ marginTop: 48 }}>
         <EmbedTokensSection />
       </div>
@@ -699,6 +702,208 @@ function AppsSection() {
       ))}
     </section>
   )
+}
+
+// ─── Maps ─────────────────────────────────────────────────────────────────────
+
+function MapsSection() {
+  const [installed, setInstalled] = useState(false)
+
+  useEffect(() => {
+    api.apps.list()
+      .then((d) => setInstalled(d.apps.some((a) => a.slug === 'maps' && a.installed)))
+      .catch(() => {})
+  }, [])
+
+  if (!installed) return null
+
+  const ingestUrl = `${API_URL_BASE}/maps/ingest?secret=YOUR_SECRET`
+
+  return (
+    <div style={{ marginTop: 48 }}>
+      <h3 style={sectionHeading}>Travel</h3>
+      <p style={{ fontSize: 13, color: '#555', marginBottom: 12 }}>
+        OwnTracks is configured to send location pings to your API. Point your OwnTracks HTTP endpoint to:
+      </p>
+      <div style={{
+        background: '#f3f4f6',
+        border: '1px solid #e5e7eb',
+        borderRadius: 6,
+        padding: '10px 14px',
+        fontFamily: 'monospace',
+        fontSize: 13,
+        wordBreak: 'break-all',
+        marginBottom: 12,
+      }}>
+        {ingestUrl}
+      </div>
+      <p style={{ fontSize: 12, color: '#888' }}>
+        Set <code>LOCATION_INGEST_SECRET</code> in your API environment variables and use the same value
+        as the <code>secret</code> query parameter in OwnTracks settings.
+      </p>
+    </div>
+  )
+}
+
+// ─── Habits & Lifestyle ───────────────────────────────────────────────────────
+
+function HabitsSection() {
+  const [installed, setInstalled] = useState(false)
+  const [starlingAccounts, setStarlingAccounts] = useState<{ id: string; name: string; connected: boolean; lastSyncedAt: string | null }[]>([])
+  const [token, setToken] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    api.apps.list()
+      .then((d) => {
+        const isInstalled = d.apps.some((a) => a.slug === 'habits' && a.installed)
+        setInstalled(isInstalled)
+        if (isInstalled) {
+          fetch(`${API_URL_BASE}/starling/status`, { credentials: 'include' })
+            .then((r) => r.json())
+            .then((d) => setStarlingAccounts(d.accounts ?? []))
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  if (!installed) return null
+
+  const healthIngestUrl = `${API_URL_BASE}/habits/health-ingest?secret=YOUR_HABITS_HEALTH_SECRET`
+
+  async function handleConnect() {
+    if (!token) return
+    setConnecting(true); setMsg('')
+    try {
+      const res = await fetch(`${API_URL_BASE}/starling/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ accessToken: token }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMsg(data.error ?? 'Connection failed'); return }
+      setMsg(`Connected ${data.accounts?.length ?? 0} account(s). Synced ${data.synced?.[0]?.synced ?? 0} transactions.`)
+      setToken('')
+      const s = await fetch(`${API_URL_BASE}/starling/status`, { credentials: 'include' }).then((r) => r.json())
+      setStarlingAccounts(s.accounts ?? [])
+    } catch { setMsg('Connection failed') }
+    finally { setConnecting(false) }
+  }
+
+  async function handleSync() {
+    setSyncing(true); setMsg('')
+    try {
+      const res = await fetch(`${API_URL_BASE}/starling/sync`, { method: 'POST', credentials: 'include' })
+      const data = await res.json()
+      const total = (data.synced ?? []).reduce((s: number, a: { synced: number }) => s + a.synced, 0)
+      setMsg(`Synced ${total} new transaction(s).`)
+      const s = await fetch(`${API_URL_BASE}/starling/status`, { credentials: 'include' }).then((r) => r.json())
+      setStarlingAccounts(s.accounts ?? [])
+    } catch { setMsg('Sync failed') }
+    finally { setSyncing(false) }
+  }
+
+  return (
+    <div style={{ marginTop: 48 }}>
+      <h3 style={sectionHeading}>Lifestyle — Habits & Finance</h3>
+
+      {/* Starling */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Starling Bank</p>
+        {starlingAccounts.length > 0 ? (
+          <div style={{ marginBottom: 12 }}>
+            {starlingAccounts.map((a) => (
+              <div key={a.id} style={{ fontSize: 13, color: '#555', marginBottom: 4 }}>
+                ✓ {a.name} — {a.connected ? `connected${a.lastSyncedAt ? `, last synced ${new Date(a.lastSyncedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : ''}` : 'token missing'}
+              </div>
+            ))}
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              style={smallBtn}
+            >
+              {syncing ? 'Syncing…' : 'Sync now'}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
+              Generate a Personal Access Token at{' '}
+              <a href="https://developer.starlingbank.com" target="_blank" rel="noreferrer" style={{ color: '#6366f1' }}>
+                developer.starlingbank.com
+              </a>{' '}
+              → API tokens → Create token → enable <code>account:read</code> and <code>transaction:read</code>.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Paste Personal Access Token…"
+                style={{ flex: 1, padding: '7px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13 }}
+              />
+              <button onClick={handleConnect} disabled={connecting || !token} style={smallBtn}>
+                {connecting ? 'Connecting…' : 'Connect'}
+              </button>
+            </div>
+          </div>
+        )}
+        {msg && <p style={{ fontSize: 12, color: '#555', marginTop: 8 }}>{msg}</p>}
+      </div>
+
+      {/* iPhone Steps */}
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>iPhone Step Count (Apple Health)</p>
+        <p style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
+          Set <code>HABITS_HEALTH_SECRET</code> in your API env, then create an iOS Shortcut:
+        </p>
+        <ol style={{ fontSize: 13, color: '#555', paddingLeft: 20, margin: '0 0 8px' }}>
+          <li>Open <strong>Shortcuts</strong> → <strong>Automation</strong> → <strong>New Automation</strong></li>
+          <li>Trigger: <strong>Time of Day</strong> → 11:55pm daily</li>
+          <li>Add action: <strong>Get Health Samples</strong> → Steps → Today → Sum</li>
+          <li>Add action: <strong>Get Contents of URL</strong> → URL below, Method POST, Body JSON: <code>{"{"}"metric": "steps", "value": [Steps Variable]{"}"}</code></li>
+        </ol>
+        <div style={codeBox}>{healthIngestUrl}</div>
+        <p style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+          Replace <code>YOUR_HABITS_HEALTH_SECRET</code> with the value you set in env. Also create a habit named "Steps" with unit "steps" in the app.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+const smallBtn: React.CSSProperties = {
+  padding: '7px 14px',
+  background: '#1a1a1a',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 6,
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 600,
+}
+
+const codeBox: React.CSSProperties = {
+  background: '#f3f4f6',
+  border: '1px solid #e5e7eb',
+  borderRadius: 6,
+  padding: '10px 14px',
+  fontFamily: 'monospace',
+  fontSize: 12,
+  wordBreak: 'break-all',
+}
+
+const sectionHeading: React.CSSProperties = {
+  margin: '0 0 16px',
+  fontSize: 14,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+  color: '#888',
 }
 
 // ─── Embed Tokens ─────────────────────────────────────────────────────────────

@@ -29,6 +29,8 @@ export function AppShellLayout() {
     { to: '/pages', label: 'Pages' },
     ...(installedSlugs.has('journal') ? [{ to: '/journal', label: 'Journal' }] : []),
     ...(installedSlugs.has('spotify') ? [{ to: '/music', label: 'Music' }] : []),
+    ...(installedSlugs.has('maps') ? [{ to: '/travel', label: 'Travel' }] : []),
+    ...(installedSlugs.has('habits') ? [{ to: '/lifestyle', label: 'Lifestyle' }] : []),
     { to: '/media', label: 'Media' },
     { to: '/settings', label: 'Settings' },
   ]

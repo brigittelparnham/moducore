@@ -8,6 +8,7 @@ import type { AppVariables } from '../types'
 const AVAILABLE_APPS = [
   { slug: 'journal', name: 'Journal', description: 'A personal journal and blog for your workspace.' },
   { slug: 'spotify', name: 'Music Journal', description: 'Visualise your Spotify listening history as a personal music story.' },
+  { slug: 'maps', name: 'Travel', description: 'Track your journeys, get personalised commute suggestions and route stats.' },
 ]
 
 export const appsRoutes = new Hono<{ Variables: AppVariables }>()

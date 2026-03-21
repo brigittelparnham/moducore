@@ -13,6 +13,8 @@ import { PublicPageView } from './pages/PublicPageView'
 import { SettingsPage } from './pages/SettingsPage'
 import { JournalFeedPage } from './pages/JournalFeedPage'
 import { SpotifyFeedPage } from './pages/SpotifyFeedPage'
+import { MapsFeedPage } from './pages/MapsFeedPage'
+import { LifestyleFeedPage } from './pages/LifestyleFeedPage'
 import { MediaPage } from './pages/MediaPage'
 
 export function App() {
@@ -40,6 +42,8 @@ export function App() {
             <Route path="/pages/:id" element={<PageEditorPage />} />
             <Route path="/journal" element={<JournalFeedPage />} />
             <Route path="/music" element={<SpotifyFeedPage />} />
+            <Route path="/travel" element={<MapsFeedPage />} />
+            <Route path="/lifestyle" element={<LifestyleFeedPage />} />
             <Route path="/media" element={<MediaPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
