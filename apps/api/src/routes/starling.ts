@@ -7,6 +7,8 @@ import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
 import { getStarlingAccounts, getStarlingBalance, syncStarlingAccount } from '../lib/starling'
 import { encryptField, decryptField } from '../lib/secrets'
+import { logger } from '../lib/logger'
+import { jobStatus } from '../scheduler'
 import type { AppVariables } from '../types'
 
 export const starlingRoutes = new Hono<{ Variables: AppVariables }>()
@@ -53,7 +55,7 @@ starlingRoutes.post(
         const bal = await getStarlingBalance(accessToken, sa.accountUid)
         startingBalance = String(bal.effectiveBalance.minorUnits / 100)
       } catch (e) {
-        console.warn(`[starling] Failed to fetch starting balance for account ${sa.accountUid}:`, e instanceof Error ? e.message : e)
+        logger.warn({ err: e, accountUid: sa.accountUid }, '[starling] Failed to fetch starting balance')
       }
 
       const account = await createAccount(db, tenant.id, {
@@ -82,7 +84,7 @@ starlingRoutes.post(
           )
           syncResults.push({ accountId: acc.id, ...result })
         } catch (e) {
-          console.warn(`[starling] Initial sync failed for account ${acc.id}:`, e instanceof Error ? e.message : e)
+          logger.warn({ err: e, accountId: acc.id }, '[starling] Initial sync failed')
         }
       }
     }
@@ -130,5 +132,13 @@ starlingRoutes.get('/status', requireAuth, async (c) => {
       lastSyncedAt: a.starlingLastSyncedAt,
       connected: !!a.starlingAccessToken,
     }))
-  return c.json({ accounts: starlingAccounts })
+  const job = jobStatus.starling
+  return c.json({
+    accounts: starlingAccounts,
+    lastSyncAt: job.lastSuccessAt,
+    lastError: job.lastError,
+    nextSyncAt: job.lastRunAt
+      ? new Date(job.lastRunAt.getTime() + 15 * 60 * 1000)
+      : null,
+  })
 })

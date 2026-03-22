@@ -5,4 +5,5 @@ export type AppVariables = {
   user?: User
   tenant?: Tenant
   tenantMember?: TenantMember
+  requestId?: string
 }

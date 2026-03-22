@@ -1,6 +1,7 @@
 import { syncAllConnectors } from '@moducore/integrations'
 import { getAllConnectedSpotify, getAccounts, deleteExpiredSessions } from '@moducore/db'
 import { getDb } from './lib/db'
+import { logger } from './lib/logger'
 import { syncSpotifyForTenant } from './routes/spotify'
 import { detectJourneysForTenant } from './lib/journey-detection'
 import { syncStarlingAccount } from './lib/starling'
@@ -10,8 +11,36 @@ const INTERVAL_MS = 15 * 60 * 1000       // 15 minutes
 const JOURNEY_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 const SESSION_CLEANUP_MS = 24 * 60 * 60 * 1000 // 24 hours
 
+// ─── D2: In-memory job status tracking ────────────────────────────────────────
+
+export type JobStatus = {
+  lastRunAt: Date | null
+  lastSuccessAt: Date | null
+  lastError: string | null
+}
+
+export const jobStatus: Record<string, JobStatus> = {
+  connectors: { lastRunAt: null, lastSuccessAt: null, lastError: null },
+  spotify:    { lastRunAt: null, lastSuccessAt: null, lastError: null },
+  starling:   { lastRunAt: null, lastSuccessAt: null, lastError: null },
+  journeys:   { lastRunAt: null, lastSuccessAt: null, lastError: null },
+}
+
+function jobStart(key: string) {
+  jobStatus[key].lastRunAt = new Date()
+}
+function jobSuccess(key: string) {
+  jobStatus[key].lastSuccessAt = new Date()
+  jobStatus[key].lastError = null
+}
+function jobFail(key: string, err: unknown) {
+  jobStatus[key].lastError = err instanceof Error ? err.message : String(err)
+}
+
+// ─── Scheduler boot ───────────────────────────────────────────────────────────
+
 export function startScheduler(): void {
-  console.log('[scheduler] Starting — syncing every 15 minutes, journey detection every 5 minutes')
+  logger.info('[scheduler] Starting — syncing every 15 minutes, journey detection every 5 minutes')
 
   setTimeout(async () => { await runSync() }, 5000)
   setInterval(async () => { await runSync() }, INTERVAL_MS)
@@ -23,32 +52,44 @@ export function startScheduler(): void {
   setInterval(async () => { await runSessionCleanup() }, SESSION_CLEANUP_MS)
 }
 
+// ─── Sync jobs ────────────────────────────────────────────────────────────────
+
 async function runSync() {
   const db = getDb()
 
+  // Connectors
+  jobStart('connectors')
   try {
-    console.log('[scheduler] Syncing all connectors…')
+    logger.info('[scheduler] Syncing all connectors…')
     await syncAllConnectors(db, decryptConfig)
-    console.log('[scheduler] Connectors synced')
-  } catch (e) {
-    console.error('[scheduler] Connector sync failed:', e)
+    jobSuccess('connectors')
+    logger.info('[scheduler] Connectors synced')
+  } catch (err) {
+    jobFail('connectors', err)
+    logger.error({ err }, '[scheduler] Connector sync failed')
   }
 
+  // Spotify
+  jobStart('spotify')
   try {
-    console.log('[scheduler] Syncing Spotify…')
+    logger.info('[scheduler] Syncing Spotify…')
     const connections = await getAllConnectedSpotify(db)
     await Promise.allSettled(
       connections.map((conn) =>
-        syncSpotifyForTenant(db, conn).catch((e) =>
-          console.error(`[scheduler] Spotify sync failed for tenant ${conn.tenantId}:`, e)
+        syncSpotifyForTenant(db, conn).catch((err) =>
+          logger.error({ err, tenantId: conn.tenantId }, '[scheduler] Spotify sync failed for tenant')
         )
       )
     )
-    console.log(`[scheduler] Spotify synced (${connections.length} tenants)`)
-  } catch (e) {
-    console.error('[scheduler] Spotify sync failed:', e)
+    jobSuccess('spotify')
+    logger.info({ count: connections.length }, '[scheduler] Spotify synced')
+  } catch (err) {
+    jobFail('spotify', err)
+    logger.error({ err }, '[scheduler] Spotify sync failed')
   }
 
+  // Starling
+  jobStart('starling')
   try {
     const tenants = await db.query.tenants.findMany()
     for (const tenant of tenants) {
@@ -59,12 +100,14 @@ async function runSync() {
       await Promise.allSettled(
         starlingAccounts.map((a) =>
           syncStarlingAccount(db, tenant.id, a.id, decryptField(a.starlingAccessToken!), a.starlingAccountUid!)
-            .catch((e) => console.error(`[scheduler] Starling sync failed for account ${a.id}:`, e))
+            .catch((err) => logger.error({ err, accountId: a.id }, '[scheduler] Starling sync failed for account'))
         )
       )
     }
-  } catch (e) {
-    console.error('[scheduler] Starling sync failed:', e)
+    jobSuccess('starling')
+  } catch (err) {
+    jobFail('starling', err)
+    logger.error({ err }, '[scheduler] Starling sync failed')
   }
 }
 
@@ -72,24 +115,27 @@ async function runSessionCleanup() {
   const db = getDb()
   try {
     await deleteExpiredSessions(db)
-    console.log('[scheduler] Expired sessions cleaned up')
-  } catch (e) {
-    console.error('[scheduler] Session cleanup failed:', e)
+    logger.info('[scheduler] Expired sessions cleaned up')
+  } catch (err) {
+    logger.error({ err }, '[scheduler] Session cleanup failed')
   }
 }
 
 async function runJourneyDetection() {
   const db = getDb()
+  jobStart('journeys')
   try {
     const tenants = await db.query.tenants.findMany()
     await Promise.allSettled(
       tenants.map((t) =>
-        detectJourneysForTenant(db, t.id).catch((e) =>
-          console.error(`[scheduler] Journey detection failed for tenant ${t.id}:`, e)
+        detectJourneysForTenant(db, t.id).catch((err) =>
+          logger.error({ err, tenantId: t.id }, '[scheduler] Journey detection failed for tenant')
         )
       )
     )
-  } catch (e) {
-    console.error('[scheduler] Journey detection failed:', e)
+    jobSuccess('journeys')
+  } catch (err) {
+    jobFail('journeys', err)
+    logger.error({ err }, '[scheduler] Journey detection failed')
   }
 }

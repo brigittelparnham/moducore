@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { logger } from './logger'
 
 const TFL_BASE = 'https://api.tfl.gov.uk'
 
@@ -100,18 +101,18 @@ export async function planJourney(
   try {
     const res = await fetch(url)
     if (!res.ok) {
-      console.warn(`[tfl] planJourney returned HTTP ${res.status} for ${from} → ${to}`)
+      logger.warn({ status: res.status, from, to }, '[tfl] planJourney returned non-200')
       return []
     }
     raw = await res.json()
-  } catch (e) {
-    console.warn('[tfl] planJourney fetch failed:', e instanceof Error ? e.message : e)
+  } catch (err) {
+    logger.warn({ err }, '[tfl] planJourney fetch failed')
     return []
   }
 
   const parsed = TflJourneyResultSchema.safeParse(raw)
   if (!parsed.success) {
-    console.warn('[tfl] planJourney response failed schema validation:', parsed.error.message)
+    logger.warn({ validationError: parsed.error.message }, '[tfl] planJourney response failed schema validation')
     return []
   }
 
@@ -153,13 +154,13 @@ export async function getLineStatuses(lineIds: string[]): Promise<LineStatus[]> 
   try {
     const res = await fetch(url)
     if (!res.ok) {
-      console.warn(`[tfl] getLineStatuses returned HTTP ${res.status} for lines: ${ids}`)
+      logger.warn({ status: res.status, ids }, '[tfl] getLineStatuses returned non-200')
       return []
     }
     const raw = await res.json()
     const parsed = TflLineStatusSchema.safeParse(raw)
     if (!parsed.success) {
-      console.warn('[tfl] getLineStatuses response failed schema validation:', parsed.error.message)
+      logger.warn({ validationError: parsed.error.message }, '[tfl] getLineStatuses response failed schema validation')
       return []
     }
     return parsed.data.map((l) => {
@@ -171,8 +172,8 @@ export async function getLineStatuses(lineIds: string[]): Promise<LineStatus[]> 
         statusDescription: String(first.statusSeverityDescription ?? 'Good Service'),
       } satisfies LineStatus
     })
-  } catch (e) {
-    console.warn('[tfl] getLineStatuses fetch failed:', e instanceof Error ? e.message : e)
+  } catch (err) {
+    logger.warn({ err }, '[tfl] getLineStatuses fetch failed')
     return []
   }
 }

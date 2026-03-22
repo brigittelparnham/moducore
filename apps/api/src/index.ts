@@ -23,6 +23,8 @@ import { starlingRoutes } from './routes/starling'
 import { siteConfigRoutes } from './routes/site-config'
 import { connectCodesRoutes } from './routes/connect-codes'
 import { startScheduler } from './scheduler'
+import { requestIdMiddleware } from './middleware/request-id'
+import { logger } from './lib/logger'
 import type { AppVariables } from './types'
 
 const db = getDb()
@@ -41,6 +43,7 @@ app.use(
   })
 )
 
+app.use(requestIdMiddleware)
 app.use(sessionMiddleware(db))
 
 app.route('/auth', authRoutes)
@@ -68,6 +71,6 @@ app.get('/', (c) => c.json({ message: 'moducore api', status: 'ok' }))
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 serve({ fetch: app.fetch, port: 3000 }, () => {
-  console.log('API running on http://localhost:3000')
+  logger.info('API running on http://localhost:3000')
   startScheduler()
 })

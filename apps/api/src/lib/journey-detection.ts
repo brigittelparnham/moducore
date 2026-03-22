@@ -4,6 +4,7 @@ import {
   type LocationPing, type KnownPlace,
 } from '@moducore/db'
 import { getDb } from './db'
+import { logger } from './logger'
 import { planJourney } from './tfl'
 import { getWeather } from './weather'
 
@@ -124,10 +125,10 @@ export async function detectJourneysForTenant(db: ReturnType<typeof getDb>, tena
         tflEstimatedS = tflOptions[0].durationMinutes * 60
         tflRoute = tflOptions[0].legs
       }
-    } catch (e) {
-      console.warn(
-        `[journey-detection] TfL plan failed (tenant=${tenantId} origin=${originLat.toFixed(4)},${originLon.toFixed(4)}):`,
-        e instanceof Error ? e.message : e
+    } catch (err) {
+      logger.warn(
+        { err, tenantId, origin: `${originLat.toFixed(4)},${originLon.toFixed(4)}` },
+        '[journey-detection] TfL plan failed'
       )
     }
 
@@ -135,10 +136,10 @@ export async function detectJourneysForTenant(db: ReturnType<typeof getDb>, tena
     let weatherSummary: unknown
     try {
       weatherSummary = await getWeather(originLat, originLon, seg.startedAt)
-    } catch (e) {
-      console.warn(
-        `[journey-detection] Weather fetch failed (tenant=${tenantId} lat=${originLat.toFixed(4)} lon=${originLon.toFixed(4)}):`,
-        e instanceof Error ? e.message : e
+    } catch (err) {
+      logger.warn(
+        { err, tenantId, lat: originLat.toFixed(4), lon: originLon.toFixed(4) },
+        '[journey-detection] Weather fetch failed'
       )
     }
 

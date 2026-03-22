@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod'
+import { logger } from './logger'
 
 const STARLING_BASE = 'https://api.starlingbank.com/api/v2'
 
@@ -109,7 +110,7 @@ export async function getStarlingAccounts(token: string): Promise<StarlingAccoun
   const raw = await starlingFetch(token, '/accounts')
   const parsed = StarlingAccountsResponseSchema.safeParse(raw)
   if (!parsed.success) {
-    console.warn('[starling] getStarlingAccounts response failed schema validation:', parsed.error.message)
+    logger.warn({ validationError: parsed.error.message }, '[starling] getStarlingAccounts response failed schema validation')
     return []
   }
   return parsed.data.accounts
@@ -152,7 +153,7 @@ export async function getStarlingTransactions(
   )
   const parsed = StarlingFeedResponseSchema.safeParse(raw)
   if (!parsed.success) {
-    console.warn('[starling] getStarlingTransactions response failed schema validation:', parsed.error.message)
+    logger.warn({ validationError: parsed.error.message }, '[starling] getStarlingTransactions response failed schema validation')
     return []
   }
   return parsed.data.feedItems

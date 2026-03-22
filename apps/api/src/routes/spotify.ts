@@ -14,6 +14,8 @@ import {
   getSpotifyDaySummary,
 } from '@moducore/db'
 import { getDb } from '../lib/db'
+import { logger } from '../lib/logger'
+import { jobStatus } from '../scheduler'
 import { requireAuth } from '../middleware/auth'
 import { generateToken } from '../lib/crypto'
 import type { AppVariables } from '../types'
@@ -120,11 +122,17 @@ spotifyRoutes.get('/status', requireAuth, async (c) => {
   const tenant = c.get('tenant')!
   const conn = await getSpotifyConnection(db, tenant.id)
   if (!conn) return c.json({ configured: false, connected: false })
+  const job = jobStatus.spotify
   return c.json({
     configured: true,
     connected: !!conn.accessToken,
     spotifyDisplayName: conn.spotifyDisplayName,
     connectedAt: conn.connectedAt,
+    lastSyncAt: job.lastSuccessAt,
+    lastError: job.lastError,
+    nextSyncAt: job.lastRunAt
+      ? new Date(job.lastRunAt.getTime() + 15 * 60 * 1000)
+      : null,
   })
 })
 
@@ -224,8 +232,8 @@ spotifyRoutes.get('/callback', async (c) => {
     await updateSpotifyOAuthState(db, conn.tenantId, null)
 
     return c.redirect(getSpotifyAppUrl())
-  } catch (e) {
-    console.error('[spotify] OAuth callback error:', e)
+  } catch (err) {
+    logger.error({ err }, '[spotify] OAuth callback error')
     return c.redirect(`${getSpotifyAppUrl()}?error=oauth_failed`)
   }
 })
@@ -280,8 +288,8 @@ spotifyRoutes.post('/sync', requireAuth, async (c) => {
   try {
     await syncSpotifyForTenant(db, conn)
     return c.json({ ok: true })
-  } catch (e) {
-    console.error('[spotify] Manual sync failed:', e)
+  } catch (err) {
+    logger.error({ err }, '[spotify] Manual sync failed')
     return c.json(apiError("INTERNAL_ERROR", 'Sync failed'), 500)
   }
 })
@@ -305,8 +313,8 @@ export async function syncSpotifyForTenant(
         `/me/top/tracks?limit=50&time_range=${range}`
       )
       await upsertSpotifyData(db, conn.tenantId, `top_tracks_${rangeKeys[range]}`, data.items)
-    } catch (e) {
-      console.error(`[spotify] Failed to sync top_tracks_${range} for tenant ${conn.tenantId}:`, e)
+    } catch (err) {
+      logger.error({ err, tenantId: conn.tenantId, range }, `[spotify] Failed to sync top_tracks`)
     }
   }
 
@@ -318,8 +326,8 @@ export async function syncSpotifyForTenant(
         `/me/top/artists?limit=50&time_range=${range}`
       )
       await upsertSpotifyData(db, conn.tenantId, `top_artists_${rangeKeys[range]}`, data.items)
-    } catch (e) {
-      console.error(`[spotify] Failed to sync top_artists_${range} for tenant ${conn.tenantId}:`, e)
+    } catch (err) {
+      logger.error({ err, tenantId: conn.tenantId, range }, `[spotify] Failed to sync top_artists`)
     }
   }
 
@@ -330,8 +338,8 @@ export async function syncSpotifyForTenant(
       '/me/player/recently-played?limit=50'
     )
     await upsertSpotifyData(db, conn.tenantId, 'recently_played', data.items)
-  } catch (e) {
-    console.error(`[spotify] Failed to sync recently_played for tenant ${conn.tenantId}:`, e)
+  } catch (err) {
+    logger.error({ err, tenantId: conn.tenantId }, '[spotify] Failed to sync recently_played')
   }
 
   // Audio features for short-term top tracks (fetch individually per Feb 2026 change)
@@ -349,7 +357,7 @@ export async function syncSpotifyForTenant(
         .map((r) => r.value)
       await upsertSpotifyData(db, conn.tenantId, 'audio_features', resolved)
     }
-  } catch (e) {
-    console.error(`[spotify] Failed to sync audio_features for tenant ${conn.tenantId}:`, e)
+  } catch (err) {
+    logger.error({ err, tenantId: conn.tenantId }, '[spotify] Failed to sync audio_features')
   }
 }

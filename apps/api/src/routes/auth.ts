@@ -6,6 +6,7 @@ import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } 
 import { apiError } from '@moducore/core'
 import { hashPassword, verifyPassword, generateToken } from '../lib/crypto'
 import { sendWelcomeEmail, sendPasswordResetEmail } from '../lib/email'
+import { logger } from '../lib/logger'
 import { getDb } from '../lib/db'
 import { SESSION_COOKIE, SESSION_DURATION_DAYS, requireAuth } from '../middleware/auth'
 import { authLimiter, signupLimiter } from '../middleware/rate-limit'
@@ -77,7 +78,7 @@ authRoutes.post('/signup', signupLimiter, zValidator('json', signupSchema), asyn
 
   // Send welcome email — fire and forget (don't block signup on email failure)
   sendWelcomeEmail(user.email, user.name, tenant.name).catch((err: unknown) =>
-    console.error('Failed to send welcome email:', err)
+    logger.error({ err }, 'Failed to send welcome email')
   )
 
   return c.json({ user: toSafeUser(user), tenant }, 201)
@@ -141,7 +142,7 @@ authRoutes.post('/forgot-password', authLimiter, zValidator('json', forgotPasswo
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
     await setPasswordResetToken(db, user.id, token, expiresAt)
     sendPasswordResetEmail(user.email, user.name, token).catch((err: unknown) =>
-      console.error('Failed to send password reset email:', err)
+      logger.error({ err }, 'Failed to send password reset email')
     )
   }
 

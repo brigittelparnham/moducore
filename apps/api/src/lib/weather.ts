@@ -1,5 +1,6 @@
 // Open-Meteo — free, no API key required
 import { z } from 'zod'
+import { logger } from './logger'
 
 const OPEN_METEO = 'https://api.open-meteo.com/v1'
 
@@ -35,7 +36,7 @@ export async function getWeather(lat: number, lon: number, time?: Date): Promise
     if (!res.ok) return null
     const parsed = OpenMeteoSchema.safeParse(await res.json())
     if (!parsed.success) {
-      console.warn('[weather] Open-Meteo response failed schema validation:', parsed.error.message)
+      logger.warn({ validationError: parsed.error.message }, '[weather] Open-Meteo response failed schema validation')
       return null
     }
     const data = parsed.data
@@ -55,11 +56,8 @@ export async function getWeather(lat: number, lon: number, time?: Date): Promise
       weatherCode,
       isRaining: precipitation > 0.1 || (weatherCode >= 51 && weatherCode <= 99),
     }
-  } catch (e) {
-    console.warn(
-      `[weather] Open-Meteo fetch failed (lat=${lat.toFixed(4)} lon=${lon.toFixed(4)}):`,
-      e instanceof Error ? e.message : e
-    )
+  } catch (err) {
+    logger.warn({ err, lat: lat.toFixed(4), lon: lon.toFixed(4) }, '[weather] Open-Meteo fetch failed')
     return null
   }
 }

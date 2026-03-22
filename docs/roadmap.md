@@ -745,16 +745,16 @@ Organised into five tracks that can be worked in parallel once the critical secu
 - Log levels: `info` for request lifecycle, `warn` for recoverable errors, `error` for failures
 - Include: `level`, `msg`, `tenantId` (where available), `requestId`, `err` (on errors)
 - Add request ID middleware (generates `x-request-id` per request, attaches to log context)
-- [ ] Install pino + pino-pretty (dev)
-- [ ] Create logger instance in apps/api/src/lib/logger.ts
-- [ ] Replace console.log/error in routes, scheduler, and integration libs
-- [ ] Add request ID middleware
+- [x] Install pino + pino-pretty (dev)
+- [x] Create logger instance in apps/api/src/lib/logger.ts (dev: pino-pretty colourised, prod: NDJSON)
+- [x] Replace console.log/error in routes, scheduler, and integration libs
+- [x] Add request ID middleware (forwards x-request-id from proxy or generates UUID; stored in AppVariables)
 
 **D2 — Status endpoints for integrations**
 - Starling, Spotify, health ingest schedulers should expose `lastSyncAt`, `lastError`, `nextSyncAt` via their status endpoints
 - `/starling/status`, `/spotify/status` already exist — enrich them with `lastError` field
-- [ ] Add lastError tracking to scheduler jobs
-- [ ] Expose via existing status endpoints
+- [x] Add lastError tracking to scheduler jobs (in-memory JobStatus: lastRunAt, lastSuccessAt, lastError)
+- [x] Expose via existing status endpoints (/starling/status + /spotify/status now include lastSyncAt, lastError, nextSyncAt)
 
 ---
 
