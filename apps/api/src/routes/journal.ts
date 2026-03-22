@@ -10,6 +10,7 @@ import {
   deleteJournalEntry,
 } from '@moducore/db'
 import { createJournalEntrySchema, updateJournalEntrySchema } from '@moducore/core'
+import { apiError } from '@moducore/core'
 import { getDb } from '../lib/db'
 import { requireAuth, requireRole } from '../middleware/auth'
 import type { AppVariables } from '../types'
@@ -47,7 +48,7 @@ journalRoutes.get('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const entry = await getJournalEntryById(db, tenant.id, c.req.param('id'))
-  if (!entry) return c.json({ error: 'Entry not found' }, 404)
+  if (!entry) return c.json(apiError("NOT_FOUND", 'Entry not found'), 404)
   return c.json({ entry })
 })
 
@@ -59,12 +60,12 @@ journalRoutes.patch('/:id', requireRole('member'), zValidator('json', updateJour
   const member = c.get('tenantMember')!
 
   const existing = await getJournalEntryById(db, tenant.id, c.req.param('id'))
-  if (!existing) return c.json({ error: 'Entry not found' }, 404)
+  if (!existing) return c.json(apiError("NOT_FOUND", 'Entry not found'), 404)
 
   const roleRank = { owner: 3, admin: 2, member: 1 }
   const isAdmin = roleRank[member.role] >= roleRank['admin']
   if (!isAdmin && existing.createdBy !== user.id) {
-    return c.json({ error: 'Forbidden — you can only edit your own entries' }, 403)
+    return c.json(apiError("FORBIDDEN", 'Forbidden — you can only edit your own entries'), 403)
   }
 
   const entry = await updateJournalEntry(db, tenant.id, c.req.param('id'), c.req.valid('json'))
@@ -76,7 +77,7 @@ journalRoutes.post('/:id/publish', requireRole('member'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const entry = await publishJournalEntry(db, tenant.id, c.req.param('id'))
-  if (!entry) return c.json({ error: 'Entry not found' }, 404)
+  if (!entry) return c.json(apiError("NOT_FOUND", 'Entry not found'), 404)
   return c.json({ entry })
 })
 
@@ -85,7 +86,7 @@ journalRoutes.post('/:id/unpublish', requireRole('member'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const entry = await unpublishJournalEntry(db, tenant.id, c.req.param('id'))
-  if (!entry) return c.json({ error: 'Entry not found' }, 404)
+  if (!entry) return c.json(apiError("NOT_FOUND", 'Entry not found'), 404)
   return c.json({ entry })
 })
 
@@ -97,12 +98,12 @@ journalRoutes.delete('/:id', requireRole('member'), async (c) => {
   const member = c.get('tenantMember')!
 
   const existing = await getJournalEntryById(db, tenant.id, c.req.param('id'))
-  if (!existing) return c.json({ error: 'Entry not found' }, 404)
+  if (!existing) return c.json(apiError("NOT_FOUND", 'Entry not found'), 404)
 
   const roleRank = { owner: 3, admin: 2, member: 1 }
   const isAdmin = roleRank[member.role] >= roleRank['admin']
   if (!isAdmin && existing.createdBy !== user.id) {
-    return c.json({ error: 'Forbidden — you can only delete your own entries' }, 403)
+    return c.json(apiError("FORBIDDEN", 'Forbidden — you can only delete your own entries'), 403)
   }
 
   await deleteJournalEntry(db, tenant.id, c.req.param('id'))

@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import {
   validateEmbedToken,
   getJournalEntriesByTenant,
@@ -35,12 +36,12 @@ embedRoutes.get('/journal', async (c) => {
   const token = c.req.query('token')
 
   if (!token) {
-    return c.json({ error: 'token is required' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   }
 
   const embedToken = await validateEmbedToken(db, token)
   if (!embedToken) {
-    return c.json({ error: 'Invalid or expired token' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
   }
 
   // Only return published entries for the tenant
@@ -58,17 +59,17 @@ embedRoutes.get('/journal/:id', async (c) => {
   const id = c.req.param('id')
 
   if (!token) {
-    return c.json({ error: 'token is required' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   }
 
   const embedToken = await validateEmbedToken(db, token)
   if (!embedToken) {
-    return c.json({ error: 'Invalid or expired token' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
   }
 
   const entry = await getJournalEntryById(db, embedToken.tenantId, id)
   if (!entry || entry.status !== 'published') {
-    return c.json({ error: 'Not found' }, 404)
+    return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   }
 
   return c.json({ entry })
@@ -81,12 +82,12 @@ embedRoutes.get('/pages', async (c) => {
   const token = c.req.query('token')
 
   if (!token) {
-    return c.json({ error: 'token is required' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   }
 
   const embedToken = await validateEmbedToken(db, token)
   if (!embedToken) {
-    return c.json({ error: 'Invalid or expired token' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
   }
 
   const all = await getPagesByTenant(db, embedToken.tenantId)
@@ -103,17 +104,17 @@ embedRoutes.get('/pages/:slug', async (c) => {
   const slug = c.req.param('slug')
 
   if (!token) {
-    return c.json({ error: 'token is required' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   }
 
   const embedToken = await validateEmbedToken(db, token)
   if (!embedToken) {
-    return c.json({ error: 'Invalid or expired token' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
   }
 
   const page = await getPublishedPageBySlug(db, embedToken.tenantId, slug)
   if (!page) {
-    return c.json({ error: 'Not found' }, 404)
+    return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   }
 
   return c.json({ page })
@@ -125,9 +126,9 @@ embedRoutes.get('/pages/:slug', async (c) => {
 embedRoutes.get('/spotify/top-tracks', async (c) => {
   const db = getDb()
   const token = c.req.query('token')
-  if (!token) return c.json({ error: 'token is required' }, 401)
+  if (!token) return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   const embedToken = await validateEmbedToken(db, token)
-  if (!embedToken) return c.json({ error: 'Invalid or expired token' }, 401)
+  if (!embedToken) return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
 
   const cached = await getSpotifyData(db, embedToken.tenantId, 'top_tracks_short')
   const tracks = (cached?.data as unknown[]) ?? []
@@ -139,9 +140,9 @@ embedRoutes.get('/spotify/top-tracks', async (c) => {
 embedRoutes.get('/spotify/now-playing', async (c) => {
   const db = getDb()
   const token = c.req.query('token')
-  if (!token) return c.json({ error: 'token is required' }, 401)
+  if (!token) return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   const embedToken = await validateEmbedToken(db, token)
-  if (!embedToken) return c.json({ error: 'Invalid or expired token' }, 401)
+  if (!embedToken) return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
 
   // Try live now-playing via tenant's Spotify token
   try {
@@ -172,9 +173,9 @@ embedRoutes.get('/spotify/now-playing', async (c) => {
 embedRoutes.get('/spotify/genres', async (c) => {
   const db = getDb()
   const token = c.req.query('token')
-  if (!token) return c.json({ error: 'token is required' }, 401)
+  if (!token) return c.json(apiError("UNAUTHORIZED", 'token is required'), 401)
   const embedToken = await validateEmbedToken(db, token)
-  if (!embedToken) return c.json({ error: 'Invalid or expired token' }, 401)
+  if (!embedToken) return c.json(apiError("UNAUTHORIZED", 'Invalid or expired token'), 401)
 
   const cached = await getSpotifyData(db, embedToken.tenantId, 'top_artists_long')
   const artists = (cached?.data as { genres?: string[] }[]) ?? []

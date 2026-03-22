@@ -1,5 +1,15 @@
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
+/** Extract a human-readable message from structured { error: { code, message } } or legacy { error: string } */
+function extractErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback
+  const err = (data as Record<string, unknown>).error
+  if (!err) return fallback
+  if (typeof err === 'string') return err                        // legacy format
+  if (typeof err === 'object' && 'message' in err) return String((err as Record<string, unknown>).message)
+  return fallback
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -7,7 +17,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error ?? 'Request failed')
+  if (!res.ok) throw new Error(extractErrorMessage(data, 'Request failed'))
   return data as T
 }
 
@@ -19,7 +29,7 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
     body: formData,
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+  if (!res.ok) throw new Error(extractErrorMessage(data, 'Upload failed'))
   return data as T
 }
 

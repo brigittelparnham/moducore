@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -52,7 +53,7 @@ financeRoutes.get('/accounts/:id', requireAuth, async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const account = await getAccount(db, tenant.id, c.req.param('id'))
-  if (!account) return c.json({ error: 'Not found' }, 404)
+  if (!account) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   const balance = await getAccountBalance(db, tenant.id, account.id)
   return c.json({ account, ...balance })
 })

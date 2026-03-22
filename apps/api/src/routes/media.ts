@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
@@ -31,8 +32,10 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 
-function getUploadsDir(): string {
-  return path.join(process.cwd(), 'uploads')
+function getUploadsDir(tenantId?: string): string {
+  return tenantId
+    ? path.join(process.cwd(), 'uploads', tenantId)
+    : path.join(process.cwd(), 'uploads')
 }
 
 // GET /media — list all media for the tenant
@@ -53,28 +56,28 @@ mediaRoutes.post('/', requireRole('member'), async (c) => {
   const file = body['file']
 
   if (!file || !(file instanceof File)) {
-    return c.json({ error: 'file is required (multipart field "file")' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'file is required (multipart field "file")'), 400)
   }
 
   if (!ALLOWED_MIME.has(file.type)) {
-    return c.json({ error: `File type "${file.type}" is not allowed` }, 400)
+    return c.json(apiError("BAD_REQUEST", `File type "${file.type}" is not allowed`), 400)
   }
 
   if (file.size > MAX_BYTES) {
-    return c.json({ error: 'File exceeds 10 MB limit' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'File exceeds 10 MB limit'), 400)
   }
 
   const ext = MIME_TO_EXT[file.type] ?? path.extname(file.name).toLowerCase()
   const filename = `${randomUUID()}${ext}`
 
-  const uploadsDir = getUploadsDir()
+  const uploadsDir = getUploadsDir(tenant.id)
   await fs.mkdir(uploadsDir, { recursive: true })
   await fs.writeFile(path.join(uploadsDir, filename), Buffer.from(await file.arrayBuffer()))
 
   const record = await createMediaRecord(db, {
     tenantId: tenant.id,
     filename: file.name, // original filename for display
-    url: `/uploads/${filename}`, // disk filename in URL
+    url: `/uploads/${tenant.id}/${filename}`, // tenant-scoped path
     mimeType: file.type,
     sizeBytes: file.size,
     uploadedBy: user.id,
@@ -90,14 +93,15 @@ mediaRoutes.delete('/:id', requireRole('member'), async (c) => {
   const id = c.req.param('id')
 
   const item = await getMediaById(db, tenant.id, id)
-  if (!item) return c.json({ error: 'Not found' }, 404)
+  if (!item) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
 
   await deleteMediaRecord(db, tenant.id, id)
 
-  // Best-effort file deletion
+  // Best-effort file deletion — derive disk path directly from stored URL
+  // Handles both legacy flat (/uploads/uuid.ext) and tenant-scoped (/uploads/tenantId/uuid.ext)
   try {
-    const diskFilename = path.basename(item.url)
-    await fs.unlink(path.join(getUploadsDir(), diskFilename))
+    const diskPath = path.join(process.cwd(), item.url)
+    await fs.unlink(diskPath)
   } catch {
     // File already gone — not an error
   }

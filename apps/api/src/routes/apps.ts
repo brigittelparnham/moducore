@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { getInstalledApps, installApp, uninstallApp } from '@moducore/db'
 import { getDb } from '../lib/db'
 import { requireAuth, requireRole } from '../middleware/auth'
@@ -31,7 +32,7 @@ appsRoutes.post('/:slug/install', requireRole('owner'), async (c) => {
   const tenant = c.get('tenant')!
   const slug = c.req.param('slug')
   if (!AVAILABLE_APPS.find((a) => a.slug === slug)) {
-    return c.json({ error: 'App not found' }, 404)
+    return c.json(apiError("NOT_FOUND", 'App not found'), 404)
   }
   const tenantApp = await installApp(db, tenant.id, slug)
   return c.json({ tenantApp })

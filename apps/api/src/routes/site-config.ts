@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { getSiteConfig, upsertSiteConfig } from '@moducore/db'
@@ -26,7 +27,7 @@ siteConfigRoutes.get('/public/:tenantSlug', async (c) => {
     where: (t, { eq }) => eq(t.slug, tenantSlug),
     columns: { id: true, name: true, slug: true },
   })
-  if (!tenant) return c.json({ error: 'Not found' }, 404)
+  if (!tenant) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   const config = await getSiteConfig(db, tenant.id)
   return c.json({ config, tenant })
 })

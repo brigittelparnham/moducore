@@ -699,41 +699,41 @@ Organised into five tracks that can be worked in parallel once the critical secu
   - Success: `{ data: T }` or `{ data: T, meta: { page, total } }` for lists
   - Error: `{ error: { code: string, message: string } }`
 - Update all routes to use the envelope; update frontend API helpers to unwrap `.data`
-- [ ] Define envelope types in packages/core
-- [ ] Update all routes (pages, journal, habits, finance, maps, spotify, connectors, auth)
-- [ ] Update frontend API fetch helpers to unwrap
+- [x] Define envelope types in packages/core
+- [x] Update all routes (pages, journal, habits, finance, maps, spotify, connectors, auth)
+- [x] Update frontend API fetch helpers to unwrap
 
 **C2 — Validate external API responses with Zod**
 - `apps/api/src/lib/tfl.ts`, `weather.ts`, `starling.ts` — responses assumed to have expected shape
 - Write minimal Zod schemas for each external API response
 - `.safeParse()` on fetch result; log + return null if invalid; never crash on malformed external data
-- [ ] tfl.ts — Zod schema for journey planner + line status responses
-- [ ] weather.ts — Zod schema for Open-Meteo response
-- [ ] starling.ts — Zod schema for transactions + account response
+- [x] tfl.ts — Zod schema for journey planner + line status responses
+- [x] weather.ts — Zod schema for Open-Meteo response
+- [x] starling.ts — Zod schema for transactions + account response
 
 **C3 — Environment variable validation at startup**
 - `apps/api/src/index.ts` — add startup env validation before server starts
 - Use Zod to parse `process.env` on boot; throw with a clear error listing all missing vars if any are absent
 - Document all vars in `.env.example` with comments
 - Required vars: `DATABASE_URL`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `HABITS_HEALTH_SECRET`, `LOCATION_INGEST_SECRET`, optional: `TFL_APP_KEY`, `SPOTIFY_APP_URL`
-- [ ] Zod env schema in apps/api/src/env.ts
-- [ ] Import and validate at the top of index.ts (before server starts)
-- [ ] Update .env.example with all vars + comments
+- [x] Zod env schema in apps/api/src/env.ts
+- [x] Import and validate at the top of index.ts (before server starts)
+- [x] Update .env.example with all vars + comments
 
 **C4 — Database indexes for tenant-scoped queries**
 - All tables queried with `WHERE tenant_id = ?` will full-scan as data grows
 - Add indexes on hot paths: `(tenant_id)` on all main tables, `(tenant_id, status)` on pages/journal_entries, `(tenant_id, date)` on habit_logs/transactions/journeys, `(tenant_id, type)` on spotify_data_cache
 - Add as a new migration (`0008_indexes.sql`)
-- [ ] Generate migration with all indexes
-- [ ] Run migration
+- [x] Generate migration with all indexes (0008_indexes.sql — 38 indexes across all tenant-scoped tables)
+- [ ] Run migration (apply when Docker is running: `docker exec -i moducore-postgres-1 psql -U moducore -d moducore < packages/db/migrations/0008_indexes.sql`)
 
 **C5 — Unsafe media uploads (public without auth)**
 - `/uploads/*` served as static files — anyone with the URL can access any uploaded file
 - Add the file to a per-tenant subdirectory (`/uploads/:tenantId/:filename`) so URLs are harder to enumerate
 - Gate `/uploads/:tenantId/*` behind tenant ownership check (or keep public but use unguessable UUIDs — they already use UUIDs, so document this as intentional)
-- [ ] Confirm uploads use UUID filenames (already implemented)
-- [ ] Move uploads into per-tenant subdirectory structure
-- [ ] Update media routes + static serving path
+- [x] Confirm uploads use UUID filenames (already implemented)
+- [x] Move uploads into per-tenant subdirectory structure (`/uploads/:tenantId/:uuid.ext`)
+- [x] Update media routes + static serving path (DELETE derives disk path directly from stored URL)
 
 ---
 

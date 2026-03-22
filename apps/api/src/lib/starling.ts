@@ -4,7 +4,51 @@
  * API docs: https://developer.starlingbank.com/docs
  */
 
+import { z } from 'zod'
+
 const STARLING_BASE = 'https://api.starlingbank.com/api/v2'
+
+// ─── Response schemas ─────────────────────────────────────────────────────────
+
+const StarlingAccountSchema = z.object({
+  accountUid: z.string(),
+  accountType: z.string(),
+  name: z.string().default(''),
+  currency: z.string(),
+  createdAt: z.string(),
+})
+
+const StarlingAccountsResponseSchema = z.object({
+  accounts: z.array(StarlingAccountSchema).default([]),
+})
+
+const StarlingBalanceSchema = z.object({
+  clearedBalance: z.object({ minorUnits: z.number(), currency: z.string() }),
+  effectiveBalance: z.object({ minorUnits: z.number(), currency: z.string() }),
+})
+
+const StarlingTransactionSchema = z.object({
+  feedItemUid: z.string(),
+  categoryUid: z.string(),
+  amount: z.object({ minorUnits: z.number(), currency: z.string() }),
+  sourceAmount: z.object({ minorUnits: z.number(), currency: z.string() }),
+  direction: z.enum(['IN', 'OUT']),
+  updatedAt: z.string(),
+  transactionTime: z.string(),
+  settlementTime: z.string().optional(),
+  source: z.string(),
+  status: z.string(),
+  counterPartyType: z.string(),
+  counterPartyName: z.string(),
+  reference: z.string().optional(),
+  country: z.string(),
+  spendingCategory: z.string(),
+  userNote: z.string().optional(),
+})
+
+const StarlingFeedResponseSchema = z.object({
+  feedItems: z.array(StarlingTransactionSchema).default([]),
+})
 
 export type StarlingAccount = {
   accountUid: string
@@ -62,15 +106,25 @@ async function starlingFetch(token: string, path: string) {
 }
 
 export async function getStarlingAccounts(token: string): Promise<StarlingAccount[]> {
-  const data = await starlingFetch(token, '/accounts')
-  return data.accounts ?? []
+  const raw = await starlingFetch(token, '/accounts')
+  const parsed = StarlingAccountsResponseSchema.safeParse(raw)
+  if (!parsed.success) {
+    console.warn('[starling] getStarlingAccounts response failed schema validation:', parsed.error.message)
+    return []
+  }
+  return parsed.data.accounts
 }
 
 export async function getStarlingBalance(
   token: string,
   accountUid: string
 ): Promise<StarlingBalance> {
-  return starlingFetch(token, `/accounts/${accountUid}/balance`)
+  const raw = await starlingFetch(token, `/accounts/${accountUid}/balance`)
+  const parsed = StarlingBalanceSchema.safeParse(raw)
+  if (!parsed.success) {
+    throw new Error(`Starling balance response invalid: ${parsed.error.message}`)
+  }
+  return parsed.data
 }
 
 export async function getStarlingSavingsSpaces(
@@ -92,11 +146,16 @@ export async function getStarlingTransactions(
     minTransactionTimestamp: from.toISOString(),
     maxTransactionTimestamp: to.toISOString(),
   })
-  const data = await starlingFetch(
+  const raw = await starlingFetch(
     token,
     `/feed/account/${accountUid}/category/${categoryUid}?${params}`
   )
-  return data.feedItems ?? []
+  const parsed = StarlingFeedResponseSchema.safeParse(raw)
+  if (!parsed.success) {
+    console.warn('[starling] getStarlingTransactions response failed schema validation:', parsed.error.message)
+    return []
+  }
+  return parsed.data.feedItems
 }
 
 /** Map Starling's spendingCategory to a human-readable name for auto-categorisation bootstrap */

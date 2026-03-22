@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import './env'  // validate env vars before anything else — exits immediately if invalid
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'

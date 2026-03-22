@@ -1,5 +1,17 @@
 // Open-Meteo — free, no API key required
+import { z } from 'zod'
+
 const OPEN_METEO = 'https://api.open-meteo.com/v1'
+
+const OpenMeteoSchema = z.object({
+  hourly: z.object({
+    time: z.array(z.string()),
+    temperature_2m: z.array(z.number()),
+    precipitation: z.array(z.number()),
+    windspeed_10m: z.array(z.number()),
+    weathercode: z.array(z.number()),
+  }),
+})
 
 export type WeatherSnapshot = {
   temperature: number    // °C
@@ -21,15 +33,12 @@ export async function getWeather(lat: number, lon: number, time?: Date): Promise
 
     const res = await fetch(`${OPEN_METEO}/forecast?${params}`)
     if (!res.ok) return null
-    const data = await res.json() as {
-      hourly: {
-        time: string[]
-        temperature_2m: number[]
-        precipitation: number[]
-        windspeed_10m: number[]
-        weathercode: number[]
-      }
+    const parsed = OpenMeteoSchema.safeParse(await res.json())
+    if (!parsed.success) {
+      console.warn('[weather] Open-Meteo response failed schema validation:', parsed.error.message)
+      return null
     }
+    const data = parsed.data
 
     // Find the closest hour to the requested time
     const target = (time ?? new Date()).toISOString().slice(0, 13) // "2026-03-16T08"

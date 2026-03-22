@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { createAccount, updateAccount, getAccounts, seedDefaultCategories } from '@moducore/db'
@@ -27,11 +28,11 @@ starlingRoutes.post(
     try {
       starlingAccounts = await getStarlingAccounts(accessToken)
     } catch {
-      return c.json({ error: 'Invalid Starling token or API error' }, 400)
+      return c.json(apiError("BAD_REQUEST", 'Invalid Starling token or API error'), 400)
     }
 
     if (!starlingAccounts.length) {
-      return c.json({ error: 'No accounts found on this token' }, 400)
+      return c.json(apiError("BAD_REQUEST", 'No accounts found on this token'), 400)
     }
 
     // Create or update moducore accounts for each Starling account

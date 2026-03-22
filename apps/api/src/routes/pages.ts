@@ -13,6 +13,7 @@ import {
   getTenantBySlug,
 } from '@moducore/db'
 import { createPageSchema, updatePageSchema } from '@moducore/core'
+import { apiError } from '@moducore/core'
 import { getDb } from '../lib/db'
 import { requireAuth, requireRole } from '../middleware/auth'
 import type { AppVariables } from '../types'
@@ -38,7 +39,7 @@ pagesRoutes.post('/', requireRole('member'), zValidator('json', createPageSchema
   const { title, slug, content } = c.req.valid('json')
 
   const available = await isPageSlugAvailable(db, tenant.id, slug)
-  if (!available) return c.json({ error: 'A page with this slug already exists' }, 400)
+  if (!available) return c.json(apiError("BAD_REQUEST", 'A page with this slug already exists'), 400)
 
   const page = await createPage(db, {
     tenantId: tenant.id,
@@ -55,7 +56,7 @@ pagesRoutes.get('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const page = await getPageById(db, tenant.id, c.req.param('id'))
-  if (!page) return c.json({ error: 'Page not found' }, 404)
+  if (!page) return c.json(apiError("NOT_FOUND", 'Page not found'), 404)
   return c.json({ page })
 })
 
@@ -68,11 +69,11 @@ pagesRoutes.patch('/:id', requireRole('member'), zValidator('json', updatePageSc
 
   if (data.slug) {
     const available = await isPageSlugAvailable(db, tenant.id, data.slug, id)
-    if (!available) return c.json({ error: 'A page with this slug already exists' }, 400)
+    if (!available) return c.json(apiError("BAD_REQUEST", 'A page with this slug already exists'), 400)
   }
 
   const page = await updatePage(db, tenant.id, id, data)
-  if (!page) return c.json({ error: 'Page not found' }, 404)
+  if (!page) return c.json(apiError("NOT_FOUND", 'Page not found'), 404)
   return c.json({ page })
 })
 
@@ -81,7 +82,7 @@ pagesRoutes.post('/:id/publish', requireRole('member'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const page = await publishPage(db, tenant.id, c.req.param('id'))
-  if (!page) return c.json({ error: 'Page not found' }, 404)
+  if (!page) return c.json(apiError("NOT_FOUND", 'Page not found'), 404)
   return c.json({ page })
 })
 
@@ -90,7 +91,7 @@ pagesRoutes.post('/:id/unpublish', requireRole('member'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const page = await unpublishPage(db, tenant.id, c.req.param('id'))
-  if (!page) return c.json({ error: 'Page not found' }, 404)
+  if (!page) return c.json(apiError("NOT_FOUND", 'Page not found'), 404)
   return c.json({ page })
 })
 
@@ -99,7 +100,7 @@ pagesRoutes.delete('/:id', requireRole('admin'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const existing = await getPageById(db, tenant.id, c.req.param('id'))
-  if (!existing) return c.json({ error: 'Page not found' }, 404)
+  if (!existing) return c.json(apiError("NOT_FOUND", 'Page not found'), 404)
   await deletePage(db, tenant.id, c.req.param('id'))
   return c.json({ ok: true })
 })
@@ -115,10 +116,10 @@ publicPagesRoutes.get('/:tenantSlug/pages/:slug', async (c) => {
   const slug = c.req.param('slug')
 
   const tenant = await getTenantBySlug(db, tenantSlug)
-  if (!tenant) return c.json({ error: 'Not found' }, 404)
+  if (!tenant) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
 
   const page = await getPublishedPageBySlug(db, tenant.id, slug)
-  if (!page) return c.json({ error: 'Not found' }, 404)
+  if (!page) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
 
   return c.json({ page, tenant: { name: tenant.name, slug: tenant.slug } })
 })

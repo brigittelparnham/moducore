@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { randomBytes } from 'crypto'
 import { requireAuth } from '../middleware/auth'
 import { createEmbedToken, getTenantEmbedTokens, revokeEmbedToken } from '@moducore/db'
@@ -27,7 +28,7 @@ embedTokensRoutes.post('/', requireAuth, async (c) => {
   }>()
 
   if (!body.name?.trim()) {
-    return c.json({ error: 'name is required' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'name is required'), 400)
   }
 
   const token = await createEmbedToken(db, {
@@ -51,7 +52,7 @@ embedTokensRoutes.delete('/:id', requireAuth, async (c) => {
   // Verify the token belongs to this tenant before revoking
   const tokens = await getTenantEmbedTokens(db, tenant.id)
   if (!tokens.find((t) => t.id === id)) {
-    return c.json({ error: 'Not found' }, 404)
+    return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   }
 
   await revokeEmbedToken(db, id)

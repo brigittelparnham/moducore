@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -21,7 +22,7 @@ mapsRoutes.post('/ingest', async (c) => {
   const secret = c.req.query('secret')
   const expected = process.env.LOCATION_INGEST_SECRET
   if (!expected || secret !== expected) {
-    return c.json({ error: 'Unauthorized' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Unauthorized'), 401)
   }
 
   // OwnTracks sends either a single object or wrapped array
@@ -94,7 +95,7 @@ mapsRoutes.get('/journeys/:id', requireAuth, async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const journey = await getJourney(db, tenant.id, c.req.param('id'))
-  if (!journey) return c.json({ error: 'Not found' }, 404)
+  if (!journey) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   return c.json({ journey })
 })
 
@@ -200,13 +201,13 @@ mapsRoutes.get(
     } else if (q.toPlace) {
       const places = await getKnownPlaces(db, tenant.id)
       const place = places.find((p) => p.name.toLowerCase() === q.toPlace!.toLowerCase())
-      if (!place) return c.json({ error: `Unknown place: ${q.toPlace}` }, 400)
+      if (!place) return c.json(apiError("BAD_REQUEST", `Unknown place: ${q.toPlace}`), 400)
       toLat = place.lat
       toLon = place.lon
     }
 
     if (toLat === undefined || toLon === undefined) {
-      return c.json({ error: 'Provide toLat+toLon or toPlace' }, 400)
+      return c.json(apiError("BAD_REQUEST", 'Provide toLat+toLon or toPlace'), 400)
     }
 
     const suggestions = await suggest(db, tenant.id, fromLat, fromLon, toLat, toLon)

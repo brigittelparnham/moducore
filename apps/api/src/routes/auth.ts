@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { setCookie, deleteCookie } from 'hono/cookie'
 import { users, tenants, tenantMembers, createSession, isTenantSlugAvailable, getUserByEmail, getUserByResetToken, setPasswordResetToken, updateUserPassword, installApp } from '@moducore/db'
 import { signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@moducore/core'
+import { apiError } from '@moducore/core'
 import { hashPassword, verifyPassword, generateToken } from '../lib/crypto'
 import { sendWelcomeEmail, sendPasswordResetEmail } from '../lib/email'
 import { getDb } from '../lib/db'
@@ -52,10 +53,10 @@ authRoutes.post('/signup', signupLimiter, zValidator('json', signupSchema), asyn
     where: (u, { eq }) => eq(u.email, email.toLowerCase()),
     columns: { id: true },
   })
-  if (existing) return c.json({ error: 'Email already in use' }, 400)
+  if (existing) return c.json(apiError("BAD_REQUEST", 'Email already in use'), 400)
 
   const slugAvailable = await isTenantSlugAvailable(db, tenantSlug)
-  if (!slugAvailable) return c.json({ error: 'Workspace slug already taken' }, 400)
+  if (!slugAvailable) return c.json(apiError("BAD_REQUEST", 'Workspace slug already taken'), 400)
 
   const passwordHash = await hashPassword(password)
 
@@ -97,7 +98,7 @@ authRoutes.post('/login', authLimiter, zValidator('json', loginSchema), async (c
   const passwordOk = user ? await verifyPassword(password, user.passwordHash) : await verifyPassword(password, dummyHash).catch(() => false)
 
   if (!user || !passwordOk) {
-    return c.json({ error: 'Invalid email or password' }, 401)
+    return c.json(apiError("UNAUTHORIZED", 'Invalid email or password'), 401)
   }
 
   // Get the user's primary tenant (first owner membership, or first membership)
@@ -107,7 +108,7 @@ authRoutes.post('/login', authLimiter, zValidator('json', loginSchema), async (c
   })
 
   if (!membership) {
-    return c.json({ error: 'No workspace found for this account' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'No workspace found for this account'), 400)
   }
 
   const tenant = await db.query.tenants.findFirst({
@@ -115,7 +116,7 @@ authRoutes.post('/login', authLimiter, zValidator('json', loginSchema), async (c
   })
 
   if (!tenant) {
-    return c.json({ error: 'Workspace not found' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'Workspace not found'), 400)
   }
 
   await createAndSetSession(c, user.id, tenant.id)
@@ -153,7 +154,7 @@ authRoutes.post('/reset-password', authLimiter, zValidator('json', resetPassword
   const { token, password } = c.req.valid('json')
 
   const user = await getUserByResetToken(db, token)
-  if (!user) return c.json({ error: 'Invalid or expired reset link' }, 400)
+  if (!user) return c.json(apiError("BAD_REQUEST", 'Invalid or expired reset link'), 400)
 
   const passwordHash = await hashPassword(password)
   await updateUserPassword(db, user.id, passwordHash)

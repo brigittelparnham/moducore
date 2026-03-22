@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
@@ -141,7 +142,7 @@ spotifyRoutes.post(
     const tenant = c.get('tenant')!
     const member = c.get('tenantMember')!
     if (member.role !== 'owner' && member.role !== 'admin') {
-      return c.json({ error: 'Only owners and admins can update Spotify credentials' }, 403)
+      return c.json(apiError("FORBIDDEN", 'Only owners and admins can update Spotify credentials'), 403)
     }
     const { clientId, clientSecret, redirectUri } = c.req.valid('json')
     const conn = await upsertSpotifyCredentials(db, tenant.id, clientId, clientSecret, redirectUri)
@@ -155,7 +156,7 @@ spotifyRoutes.delete('/credentials', requireAuth, async (c) => {
   const tenant = c.get('tenant')!
   const member = c.get('tenantMember')!
   if (member.role !== 'owner' && member.role !== 'admin') {
-    return c.json({ error: 'Forbidden' }, 403)
+    return c.json(apiError("FORBIDDEN", 'Forbidden'), 403)
   }
   await disconnectSpotify(db, tenant.id)
   return c.json({ ok: true })
@@ -166,7 +167,7 @@ spotifyRoutes.get('/connect', requireAuth, async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const conn = await getSpotifyConnection(db, tenant.id)
-  if (!conn) return c.json({ error: 'Save Spotify credentials first' }, 400)
+  if (!conn) return c.json(apiError("BAD_REQUEST", 'Save Spotify credentials first'), 400)
 
   const state = generateToken()
   await updateSpotifyOAuthState(db, tenant.id, state)
@@ -274,14 +275,14 @@ spotifyRoutes.post('/sync', requireAuth, async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const conn = await getSpotifyConnection(db, tenant.id)
-  if (!conn?.accessToken) return c.json({ error: 'Not connected to Spotify' }, 400)
+  if (!conn?.accessToken) return c.json(apiError("BAD_REQUEST", 'Not connected to Spotify'), 400)
 
   try {
     await syncSpotifyForTenant(db, conn)
     return c.json({ ok: true })
   } catch (e) {
     console.error('[spotify] Manual sync failed:', e)
-    return c.json({ error: 'Sync failed' }, 500)
+    return c.json(apiError("INTERNAL_ERROR", 'Sync failed'), 500)
   }
 })
 

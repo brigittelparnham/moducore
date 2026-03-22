@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { appLinkTokens } from '@moducore/db'
@@ -68,9 +69,9 @@ connectCodesRoutes.post(
       ),
     })
 
-    if (!linkToken) return c.json({ error: 'Invalid or expired code' }, 400)
+    if (!linkToken) return c.json(apiError("BAD_REQUEST", 'Invalid or expired code'), 400)
     if (linkToken.grantingTenantId === tenant.id) {
-      return c.json({ error: 'Cannot link to yourself' }, 400)
+      return c.json(apiError("BAD_REQUEST", 'Cannot link to yourself'), 400)
     }
 
     await db

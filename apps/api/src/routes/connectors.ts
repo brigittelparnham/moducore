@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { apiError } from '@moducore/core'
 import {
   getConnectorsByTenant,
   getConnectorById,
@@ -32,7 +33,7 @@ connectorsRoutes.get('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const row = await getConnectorById(db, tenant.id, c.req.param('id'))
-  if (!row) return c.json({ error: 'Not found' }, 404)
+  if (!row) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   const connector = { ...row, config: decryptConfig(row.config) }
   return c.json({ connector })
 })
@@ -44,7 +45,7 @@ connectorsRoutes.post('/', async (c) => {
   const body = await c.req.json<{ type: string; name: string; config: Record<string, unknown> }>()
 
   if (!body.type || !body.name) {
-    return c.json({ error: 'type and name are required' }, 400)
+    return c.json(apiError("BAD_REQUEST", 'type and name are required'), 400)
   }
 
   const connector = await createConnector(db, {
@@ -66,7 +67,7 @@ connectorsRoutes.patch('/:id', async (c) => {
     ? { ...body, config: encryptConfig(body.config) }
     : body
   const row = await updateConnector(db, tenant.id, c.req.param('id'), update)
-  if (!row) return c.json({ error: 'Not found' }, 404)
+  if (!row) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   const connector = { ...row, config: decryptConfig(row.config) }
   return c.json({ connector })
 })
@@ -76,7 +77,7 @@ connectorsRoutes.delete('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const existing = await getConnectorById(db, tenant.id, c.req.param('id'))
-  if (!existing) return c.json({ error: 'Not found' }, 404)
+  if (!existing) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   await deleteConnector(db, tenant.id, c.req.param('id'))
   return c.json({ ok: true })
 })
@@ -86,7 +87,7 @@ connectorsRoutes.post('/:id/sync', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const result = await syncConnector(db, tenant.id, c.req.param('id'), decryptConfig)
-  if (!result.ok) return c.json({ error: result.error }, 400)
+  if (!result.ok) return c.json(apiError('SYNC_FAILED', result.error ?? 'Sync failed'), 400)
   return c.json({ ok: true })
 })
 
@@ -95,7 +96,7 @@ connectorsRoutes.get('/:id/data', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const connector = await getConnectorById(db, tenant.id, c.req.param('id'))
-  if (!connector) return c.json({ error: 'Not found' }, 404)
+  if (!connector) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   const cache = await getLatestConnectorCache(db, connector.id)
   if (!cache) return c.json({ data: null, syncedAt: null })
   return c.json({ data: cache.data, syncedAt: cache.fetchedAt })

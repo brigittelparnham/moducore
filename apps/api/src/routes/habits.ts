@@ -16,6 +16,7 @@ import {
   addPoints, getPointsTotal, getPointsLedger,
   getHabitsDaySummary,
 } from '@moducore/db'
+import { apiError } from '@moducore/core'
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
 import { calcStreak, checkRewardUnlocks } from '../lib/habit-streaks'
@@ -28,7 +29,7 @@ export const habitsRoutes = new Hono<{ Variables: AppVariables }>()
 habitsRoutes.post('/health-ingest', async (c) => {
   const secret = c.req.query('secret')
   const expected = process.env.HABITS_HEALTH_SECRET
-  if (!expected || secret !== expected) return c.json({ error: 'Unauthorized' }, 401)
+  if (!expected || secret !== expected) return c.json(apiError("UNAUTHORIZED", 'Unauthorized'), 401)
 
   const body = await c.req.json().catch(() => null)
   if (!body || typeof body.metric !== 'string' || typeof body.value !== 'number') {
@@ -90,7 +91,7 @@ habitsRoutes.get('/:id', requireAuth, async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const habit = await getHabit(db, tenant.id, c.req.param('id'))
-  if (!habit) return c.json({ error: 'Not found' }, 404)
+  if (!habit) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
   return c.json({ habit })
 })
 
@@ -166,7 +167,7 @@ habitsRoutes.post(
     const { value, loggedAt, source, notes } = c.req.valid('json')
 
     const habit = await getHabit(db, tenant.id, habitId)
-    if (!habit) return c.json({ error: 'Not found' }, 404)
+    if (!habit) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
 
     const log = await logHabit(db, tenant.id, habitId, {
       value,
@@ -259,13 +260,13 @@ habitsRoutes.post('/rewards/:id/redeem', requireAuth, async (c) => {
 
   const allRewards = await getRewards(db, tenant.id)
   const reward = allRewards.find((r) => r.id === rewardId)
-  if (!reward) return c.json({ error: 'Not found' }, 404)
-  if (!reward.earnedAt) return c.json({ error: 'Reward not yet earned' }, 400)
-  if (reward.redeemedAt) return c.json({ error: 'Already redeemed' }, 400)
+  if (!reward) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
+  if (!reward.earnedAt) return c.json(apiError("BAD_REQUEST", 'Reward not yet earned'), 400)
+  if (reward.redeemedAt) return c.json(apiError("BAD_REQUEST", 'Already redeemed'), 400)
 
   if (reward.rewardType === 'points_spend' && reward.pointsCost) {
     const balance = await getPointsTotal(db, tenant.id)
-    if (balance < reward.pointsCost) return c.json({ error: 'Not enough points' }, 400)
+    if (balance < reward.pointsCost) return c.json(apiError("BAD_REQUEST", 'Not enough points'), 400)
     await addPoints(db, tenant.id, -reward.pointsCost, `Redeemed: ${reward.name}`, reward.id)
   }
 

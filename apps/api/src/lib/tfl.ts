@@ -1,4 +1,40 @@
+import { z } from 'zod'
+
 const TFL_BASE = 'https://api.tfl.gov.uk'
+
+// ─── Response schemas ─────────────────────────────────────────────────────────
+
+const TflLegSchema = z.object({
+  mode: z.object({ id: z.string() }).optional(),
+  instruction: z.object({ summary: z.string().optional(), detailed: z.string().optional() }).optional(),
+  departureTime: z.string().optional(),
+  arrivalTime: z.string().optional(),
+  duration: z.number().optional(),
+  routeOptions: z.array(z.object({
+    lineIdentifier: z.object({ id: z.string().optional(), name: z.string().optional() }).optional(),
+  })).optional(),
+  departurePoint: z.object({ commonName: z.string().optional() }).optional(),
+  arrivalPoint: z.object({ commonName: z.string().optional() }).optional(),
+})
+
+const TflJourneySchema = z.object({
+  duration: z.number().optional(),
+  fare: z.object({ totalCost: z.number() }).optional(),
+  legs: z.array(TflLegSchema).optional(),
+})
+
+const TflJourneyResultSchema = z.object({
+  journeys: z.array(TflJourneySchema).optional(),
+})
+
+const TflLineStatusSchema = z.array(z.object({
+  id: z.unknown(),
+  name: z.unknown(),
+  lineStatuses: z.array(z.object({
+    statusSeverity: z.number().optional(),
+    statusSeverityDescription: z.string().optional(),
+  })).optional(),
+}))
 
 function appKey() {
   return process.env.TFL_APP_KEY ?? ''
@@ -60,50 +96,49 @@ export async function planJourney(
 
   const url = `${TFL_BASE}/Journey/JourneyResults/${encodeURIComponent(from)}/to/${encodeURIComponent(to)}?${qs(params)}`
 
-  let data: Record<string, unknown>
+  let raw: unknown
   try {
     const res = await fetch(url)
     if (!res.ok) {
       console.warn(`[tfl] planJourney returned HTTP ${res.status} for ${from} → ${to}`)
       return []
     }
-    data = await res.json() as Record<string, unknown>
+    raw = await res.json()
   } catch (e) {
     console.warn('[tfl] planJourney fetch failed:', e instanceof Error ? e.message : e)
     return []
   }
 
-  const journeys = (data.journeys as unknown[]) ?? []
-  return journeys.map((j) => {
-    const journey = j as Record<string, unknown>
-    const legs = ((journey.legs ?? []) as unknown[]).map((l) => {
-      const leg = l as Record<string, unknown>
-      const instruction = leg.instruction as Record<string, string> | undefined
-      const mode = (leg.mode as Record<string, string> | undefined)?.id ?? 'unknown'
-      const routeOptions = (leg.routeOptions as unknown[] | undefined) ?? []
-      const lineId = routeOptions.length > 0
-        ? ((routeOptions[0] as Record<string, unknown>).lineIdentifier as Record<string, string> | undefined)?.id
-        : undefined
-      const lineName = routeOptions.length > 0
-        ? ((routeOptions[0] as Record<string, unknown>).lineIdentifier as Record<string, string> | undefined)?.name
-        : undefined
+  const parsed = TflJourneyResultSchema.safeParse(raw)
+  if (!parsed.success) {
+    console.warn('[tfl] planJourney response failed schema validation:', parsed.error.message)
+    return []
+  }
+
+  const journeys = parsed.data.journeys ?? []
+  return journeys.map((journey) => {
+    const legs = (journey.legs ?? []).map((leg) => {
+      const instruction = leg.instruction
+      const mode = leg.mode?.id ?? 'unknown'
+      const routeOptions = leg.routeOptions ?? []
+      const lineId = routeOptions[0]?.lineIdentifier?.id
+      const lineName = routeOptions[0]?.lineIdentifier?.name
       return {
         mode,
         instruction: instruction?.detailed ?? instruction?.summary ?? '',
-        departureTime: (leg.departureTime as string) ?? '',
-        arrivalTime: (leg.arrivalTime as string) ?? '',
+        departureTime: leg.departureTime ?? '',
+        arrivalTime: leg.arrivalTime ?? '',
         durationMinutes: Number(leg.duration ?? 0),
         lineName,
         lineId,
-        departureStop: (leg.departurePoint as Record<string, string> | undefined)?.commonName,
-        arrivalStop: (leg.arrivalPoint as Record<string, string> | undefined)?.commonName,
+        departureStop: leg.departurePoint?.commonName,
+        arrivalStop: leg.arrivalPoint?.commonName,
       } satisfies TflLeg
     })
-    const fare = (journey.fare as Record<string, number> | undefined)?.totalCost
     return {
       durationMinutes: Number(journey.duration ?? 0),
       legs,
-      fare,
+      fare: journey.fare?.totalCost,
     } satisfies TflJourneyOption
   })
 }
@@ -121,16 +156,19 @@ export async function getLineStatuses(lineIds: string[]): Promise<LineStatus[]> 
       console.warn(`[tfl] getLineStatuses returned HTTP ${res.status} for lines: ${ids}`)
       return []
     }
-    const data = await res.json() as unknown[]
-    return data.map((line) => {
-      const l = line as Record<string, unknown>
-      const statuses = (l.lineStatuses as unknown[] | undefined) ?? []
-      const first = (statuses[0] as Record<string, unknown> | undefined) ?? {}
+    const raw = await res.json()
+    const parsed = TflLineStatusSchema.safeParse(raw)
+    if (!parsed.success) {
+      console.warn('[tfl] getLineStatuses response failed schema validation:', parsed.error.message)
+      return []
+    }
+    return parsed.data.map((l) => {
+      const first = (l.lineStatuses ?? [])[0] ?? {}
       return {
         lineId: String(l.id ?? ''),
         lineName: String(l.name ?? ''),
         severity: Number(first.statusSeverity ?? 10),
-        statusDescription: String((first.statusSeverityDescription) ?? 'Good Service'),
+        statusDescription: String(first.statusSeverityDescription ?? 'Good Service'),
       } satisfies LineStatus
     })
   } catch (e) {
