@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    # ── PostgreSQL service for integration tests ───────────────────────────────
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: moducore
+          POSTGRES_PASSWORD: moducore
+          POSTGRES_DB: moducore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── Node + pnpm ──────────────────────────────────────────────────────────
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # ── Install ───────────────────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ── Build ─────────────────────────────────────────────────────────────────
+      - name: Build all packages
+        run: pnpm turbo build
+
+      # ── Run database migrations for integration tests ─────────────────────────
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://moducore:moducore@localhost:5432/moducore_test
+        run: |
+          for f in packages/db/migrations/*.sql; do
+            echo "Running $f"
+            PGPASSWORD=moducore psql -h localhost -U moducore -d moducore_test -f "$f"
+          done
+
+      # ── Test ──────────────────────────────────────────────────────────────────
+      - name: Run tests
+        env:
+          # Unit tests need these stubs; integration tests use TEST_DATABASE_URL
+          DATABASE_URL: postgresql://moducore:moducore@localhost:5432/moducore_test
+          TEST_DATABASE_URL: postgresql://moducore:moducore@localhost:5432/moducore_test
+          AUTH_SECRET: ci-test-secret
+          ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          RESEND_API_KEY: re_ci_placeholder
+          HABITS_HEALTH_SECRET: ci-health-secret
+          LOCATION_INGEST_SECRET: ci-location-secret
+          NODE_ENV: test
+        run: pnpm turbo test

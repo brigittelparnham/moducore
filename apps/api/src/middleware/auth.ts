@@ -7,6 +7,7 @@ import {
   getTenantMember,
   isSessionValid,
 } from '@moducore/db'
+import { apiError } from '@moducore/core'
 import type { AppVariables } from '../types'
 import type { DbClient } from '@moducore/db'
 
@@ -40,7 +41,7 @@ export function sessionMiddleware(db: DbClient): MiddlewareHandler<{ Variables: 
 // Rejects with 401 if the request has no valid session
 export const requireAuth: MiddlewareHandler<{ Variables: AppVariables }> = async (c, next) => {
   if (!c.get('user')) {
-    return c.json({ error: 'Unauthorized' }, 401)
+    return c.json(apiError('UNAUTHORIZED', 'Authentication required'), 401)
   }
   await next()
 }
@@ -53,7 +54,7 @@ export function requireRole(
   return async (c, next) => {
     const member = c.get('tenantMember')
     if (!member || roleRank[member.role] < roleRank[minRole]) {
-      return c.json({ error: 'Forbidden' }, 403)
+      return c.json(apiError('FORBIDDEN', 'Insufficient permissions'), 403)
     }
     await next()
   }

@@ -5,7 +5,8 @@ import { getWeather, weatherFactor } from './weather'
 
 const MATCH_RADIUS_DEG = 0.005 // ~500m threshold for route matching
 
-function coordsMatch(a: number, b: number, threshold = MATCH_RADIUS_DEG): boolean {
+/** @internal — exported for unit tests */
+export function coordsMatch(a: number, b: number, threshold = MATCH_RADIUS_DEG): boolean {
   return Math.abs(a - b) < threshold
 }
 
@@ -120,7 +121,8 @@ export async function suggest(
   return suggestions.sort((a, b) => a.durationEstimateS - b.durationEstimateS)
 }
 
-function inferDominantMode(legs: TflJourneyOption['legs']): string {
+/** @internal — exported for unit tests */
+export function inferDominantMode(legs: TflJourneyOption['legs']): string {
   // Sum duration by mode, return the mode with most time
   const totals: Record<string, number> = {}
   for (const leg of legs) {
@@ -129,7 +131,8 @@ function inferDominantMode(legs: TflJourneyOption['legs']): string {
   return Object.entries(totals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'walking'
 }
 
-function buildLabel(legs: TflJourneyOption['legs']): string {
+/** @internal — exported for unit tests */
+export function buildLabel(legs: TflJourneyOption['legs']): string {
   const transitLegs = legs.filter((l) => l.mode !== 'walking' && l.lineId)
   if (transitLegs.length === 0) return 'Walking'
   const lines = transitLegs

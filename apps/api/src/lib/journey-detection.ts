@@ -10,7 +10,8 @@ import { getWeather } from './weather'
 
 // ─── Haversine distance (metres) ─────────────────────────────────────────────
 
-function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+/** @internal — exported for unit tests */
+export function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000
   const φ1 = (lat1 * Math.PI) / 180
   const φ2 = (lat2 * Math.PI) / 180
@@ -22,7 +23,8 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): num
 
 // ─── Mode inference from avg speed ───────────────────────────────────────────
 
-function inferMode(distanceM: number, durationS: number): string {
+/** @internal — exported for unit tests */
+export function inferMode(distanceM: number, durationS: number): string {
   const kmh = (distanceM / durationS) * 3.6
   if (kmh < 4) return 'walking'
   if (kmh < 25) return 'cycling'
@@ -49,7 +51,8 @@ type Segment = {
   distanceM: number
 }
 
-function segmentPings(pings: LocationPing[]): Segment[] {
+/** @internal — exported for unit tests */
+export function segmentPings(pings: LocationPing[]): Segment[] {
   if (pings.length < 2) return []
 
   const GAP_MS = 5 * 60 * 1000   // 5 min gap = new journey

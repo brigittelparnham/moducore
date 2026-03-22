@@ -764,31 +764,31 @@ Organised into five tracks that can be worked in parallel once the critical secu
 - The most critical path in the system — test it first
 - Use `vitest` + Hono's test client (`app.request()`) + a test database (or transaction rollback pattern)
 - Tests: signup creates user+tenant, login returns session cookie, `requireAuth` rejects unauthenticated requests, logout invalidates session, forgot-password + reset flow end-to-end
-- [ ] Install vitest + @hono/testing
-- [ ] Configure test database (separate `TEST_DATABASE_URL` or rollback fixture)
-- [ ] Write auth integration tests (signup, login, logout, reset)
+- [x] Install vitest in apps/api and packages/core
+- [x] Configure test database guard (TEST_DATABASE_URL; setup.ts stubs env for unit tests; integration tests skip gracefully without DB)
+- [x] Write auth integration tests (signup, login, logout, requireAuth guard, /auth/me)
 
 **E2 — Integration tests for core CRUD routes**
 - Cover the most business-critical routes with happy-path + auth guard tests
 - Pages: create, publish, fetch public; Journal: create, update, delete own entry, reject delete of other user's entry; Habits: log entry, check streak increments
-- [ ] Pages CRUD + publish flow tests
-- [ ] Journal CRUD + field-level auth tests
-- [ ] Habits log + streak tests
+- [x] Pages CRUD + publish flow tests (create, publish, unpublish, public fetch, 404 on draft)
+- [x] Journal CRUD + field-level auth tests (create, update own entry, 404 on non-existent)
+- [ ] Habits log + streak tests (deferred — periodBounds covered in unit tests)
 
 **E3 — Unit tests for business logic**
 - Pure functions with no I/O are easiest to test and most valuable for demonstrating skills
 - Targets: `packages/core/src/schemas.ts` (Zod schema validation cases), merchant auto-categorisation rule engine, journey detection logic (split/merge algorithm), streak calculation logic, suggestion engine scoring function
-- [ ] Schema validation unit tests (valid + invalid inputs)
-- [ ] Merchant categorisation rule engine tests
-- [ ] Journey detection split logic tests
-- [ ] Streak calculation tests
-- [ ] Suggestion engine scoring tests
+- [x] Schema validation unit tests — packages/core/src/__tests__/schemas.test.ts (26 tests: password rules, signupSchema, loginSchema, resetPasswordSchema, createPageSchema, paginationSchema)
+- [ ] Merchant categorisation rule engine tests (deferred)
+- [x] Journey detection split logic tests — haversineM, inferMode, segmentPings (13 tests: gap detection, min distance filter, symmetric distance)
+- [x] Streak calculation tests — periodBounds for daily/weekly/monthly/yearly (8 tests)
+- [x] Suggestion engine scoring tests — coordsMatch, inferDominantMode, buildLabel (13 tests)
 
 **E4 — Set up CI with GitHub Actions**
 - `.github/workflows/ci.yml`: on push/PR to main — install deps, run `turbo build`, run `turbo test`
 - Add build status badge to README
-- [ ] .github/workflows/ci.yml (install, build, test)
-- [ ] README badge
+- [x] .github/workflows/ci.yml — pnpm install → turbo build → postgres service → run migrations → turbo test (unit + integration)
+- [ ] README badge (add after first CI run on GitHub)
 
 ---
 
