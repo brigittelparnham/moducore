@@ -5,6 +5,7 @@ import { createAccount, updateAccount, getAccounts, seedDefaultCategories } from
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
 import { getStarlingAccounts, getStarlingBalance, syncStarlingAccount } from '../lib/starling'
+import { encryptField, decryptField } from '../lib/secrets'
 import type { AppVariables } from '../types'
 
 export const starlingRoutes = new Hono<{ Variables: AppVariables }>()
@@ -40,7 +41,7 @@ starlingRoutes.post(
     for (const sa of starlingAccounts) {
       const existing = existingAccounts.find((a) => a.starlingAccountUid === sa.accountUid)
       if (existing) {
-        await updateAccount(db, tenant.id, existing.id, { starlingAccessToken: accessToken })
+        await updateAccount(db, tenant.id, existing.id, { starlingAccessToken: encryptField(accessToken) })
         created.push({ ...existing, updated: true })
         continue
       }
@@ -50,7 +51,9 @@ starlingRoutes.post(
       try {
         const bal = await getStarlingBalance(accessToken, sa.accountUid)
         startingBalance = String(bal.effectiveBalance.minorUnits / 100)
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.warn(`[starling] Failed to fetch starting balance for account ${sa.accountUid}:`, e instanceof Error ? e.message : e)
+      }
 
       const account = await createAccount(db, tenant.id, {
         name: sa.name || 'Starling',
@@ -61,7 +64,7 @@ starlingRoutes.post(
         color: '#7b5ea7', // Starling purple
         provider: 'starling',
         starlingAccountUid: sa.accountUid,
-        starlingAccessToken: accessToken,
+        starlingAccessToken: encryptField(accessToken),
       })
       created.push(account)
     }
@@ -77,7 +80,9 @@ starlingRoutes.post(
             db, tenant.id, acc.id, accessToken, acc.starlingAccountUid
           )
           syncResults.push({ accountId: acc.id, ...result })
-        } catch { /* ignore sync errors on connect */ }
+        } catch (e) {
+          console.warn(`[starling] Initial sync failed for account ${acc.id}:`, e instanceof Error ? e.message : e)
+        }
       }
     }
 
@@ -96,7 +101,7 @@ starlingRoutes.post('/sync', requireAuth, async (c) => {
 
   const results = await Promise.allSettled(
     starlingAccounts.map((a) =>
-      syncStarlingAccount(db, tenant.id, a.id, a.starlingAccessToken!, a.starlingAccountUid!)
+      syncStarlingAccount(db, tenant.id, a.id, decryptField(a.starlingAccessToken!), a.starlingAccountUid!)
         .then((r) => ({ accountId: a.id, name: a.name, ...r }))
     )
   )

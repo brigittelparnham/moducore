@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { useEffect, useState } from 'react'
 
 type Page = {
@@ -90,7 +91,7 @@ export function CMSPageWidget({ token, slug, apiUrl = 'http://localhost:3000', s
       {html ? (
         <div
           className="moducore-cms-content"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
         />
       ) : (
         <p style={{ color: '#888', fontSize: 14 }}>No content.</p>

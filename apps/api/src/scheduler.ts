@@ -1,10 +1,10 @@
 import { syncAllConnectors } from '@moducore/integrations'
-import { getAllConnectedSpotify } from '@moducore/db'
+import { getAllConnectedSpotify, getAccounts } from '@moducore/db'
 import { getDb } from './lib/db'
 import { syncSpotifyForTenant } from './routes/spotify'
 import { detectJourneysForTenant } from './lib/journey-detection'
-import { getAccounts } from '@moducore/db'
 import { syncStarlingAccount } from './lib/starling'
+import { decryptField, decryptConfig } from './lib/secrets'
 
 const INTERVAL_MS = 15 * 60 * 1000 // 15 minutes
 const JOURNEY_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
@@ -24,7 +24,7 @@ async function runSync() {
 
   try {
     console.log('[scheduler] Syncing all connectors…')
-    await syncAllConnectors(db)
+    await syncAllConnectors(db, decryptConfig)
     console.log('[scheduler] Connectors synced')
   } catch (e) {
     console.error('[scheduler] Connector sync failed:', e)
@@ -54,7 +54,7 @@ async function runSync() {
       )
       await Promise.allSettled(
         starlingAccounts.map((a) =>
-          syncStarlingAccount(db, tenant.id, a.id, a.starlingAccessToken!, a.starlingAccountUid!)
+          syncStarlingAccount(db, tenant.id, a.id, decryptField(a.starlingAccessToken!), a.starlingAccountUid!)
             .catch((e) => console.error(`[scheduler] Starling sync failed for account ${a.id}:`, e))
         )
       )

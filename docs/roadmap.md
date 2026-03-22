@@ -617,6 +617,210 @@ New pages use a structured block editor. Old HTML pages open in the legacy edito
 
 ---
 
+## Phase 14 — Production Hardening (Security, Testing, Observability)
+
+Portfolio-quality code that also passes a real senior engineering review. Addresses every gap identified in the Phase 13 audit. No new features — this phase makes what exists safe, observable, and verifiable.
+
+Organised into five tracks that can be worked in parallel once the critical security items are done.
+
+---
+
+### Track A — Critical Security (do first)
+
+**A1 — XSS: sanitize `dangerouslySetInnerHTML` in PublicPageView**
+- `apps/cms/src/pages/PublicPageView.tsx` uses `dangerouslySetInnerHTML` on user-authored block HTML with no sanitization
+- Install `dompurify` + `@types/dompurify`; wrap every `dangerouslySetInnerHTML` call with `DOMPurify.sanitize()`
+- Apply the same fix to the legacy HTML content path (line ~95)
+- [ ] Install dompurify
+- [ ] Sanitize block.html in PublicPageView
+- [ ] Sanitize legacy HTML content path
+
+**A2 — Encrypt secrets stored in the database**
+- `packages/db/src/schema/connectors.ts` has explicit `TODO: encrypt at application layer` comment
+- `accounts` table stores `starlingAccessToken` as plaintext JSONB
+- Implement AES-256-GCM encrypt/decrypt helpers in `packages/core/src/crypto.ts`
+- Encrypt on write, decrypt on read in the relevant query helpers
+- New env var: `ENCRYPTION_KEY` (32 random bytes, base64)
+- [ ] AES-256-GCM helpers in packages/core
+- [ ] Encrypt connector config on write, decrypt on read
+- [ ] Encrypt starlingAccessToken on write, decrypt on read
+- [ ] Add ENCRYPTION_KEY to .env.example and startup validation
+- [ ] Remove the TODO comment (resolve, don't leave it)
+
+**A3 — Fix silent error suppression in schedulers**
+- `apps/api/src/lib/journey-detection.ts` — multiple `catch {}` blocks swallow errors silently
+- `apps/api/src/routes/starling.ts` — Starling sync auth failures swallowed
+- `apps/api/src/lib/tfl.ts` and `weather.ts` — external API failures invisible
+- Replace silent catches with structured error logging (see Track D)
+- Scheduler failures should: log the error with context, not crash the process, surface in a `lastError` field queryable via status endpoints
+- [ ] journey-detection.ts — log errors with context
+- [ ] starling sync — log auth failures, surface via /starling/status
+- [ ] tfl.ts + weather.ts — log fetch failures, return null with error context
+
+---
+
+### Track B — Auth & Session Hardening
+
+**B1 — Rate limiting on auth endpoints**
+- Install `hono-rate-limiter` or equivalent (works with Hono middleware pattern)
+- Apply to: `POST /auth/signup`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`
+- Limits: 5 requests per 15 min per IP on login/forgot; 10 per hour on signup
+- [ ] Install rate limiter package
+- [ ] Apply to auth routes with appropriate windows
+
+**B2 — Enforce session expiry at query time**
+- `packages/db/src/queries/sessions.ts` — `getSessionByToken` must add `AND expires_at > NOW()` to the lookup
+- Currently, an expired session token may still authenticate
+- [ ] Update getSessionByToken query to filter expired sessions
+- [ ] Add a periodic cleanup job (delete sessions older than 30 days) to the scheduler
+
+**B3 — Stronger password requirements**
+- `packages/core/src/schemas.ts` password schema: raise minimum to 12 chars, require at least one number and one special character
+- Update error messages to be informative ("Password must be at least 12 characters and contain a number and symbol")
+- Apply the updated schema to both signup and reset-password routes
+- [ ] Update password Zod schema in packages/core
+- [ ] Confirm both signup and reset routes use the shared schema
+
+**B4 — Field-level authorization (per-user within tenant)**
+- Journal entries, habit logs, transactions — any tenant member can currently edit/delete any other member's rows
+- Routes that mutate a specific row should verify `createdBy = session.userId` (or `requireRole('admin')`)
+- Affected routes: `PATCH/DELETE /journal/:id`, `PATCH/DELETE /habits/:id`, `PATCH /transactions/:id`
+- [ ] journal.ts — add createdBy check on PATCH/DELETE
+- [ ] habits.ts — add createdBy check on PATCH/DELETE
+- [ ] transactions.ts — add createdBy check on PATCH
+
+---
+
+### Track C — API Quality
+
+**C1 — Consistent API response envelope**
+- Currently routes return `{ ok: true }`, bare resources, `{ error: 'msg' }`, or `{ data: [...] }` inconsistently
+- Define a standard envelope in `packages/core/src/api.ts`:
+  - Success: `{ data: T }` or `{ data: T, meta: { page, total } }` for lists
+  - Error: `{ error: { code: string, message: string } }`
+- Update all routes to use the envelope; update frontend API helpers to unwrap `.data`
+- [ ] Define envelope types in packages/core
+- [ ] Update all routes (pages, journal, habits, finance, maps, spotify, connectors, auth)
+- [ ] Update frontend API fetch helpers to unwrap
+
+**C2 — Validate external API responses with Zod**
+- `apps/api/src/lib/tfl.ts`, `weather.ts`, `starling.ts` — responses assumed to have expected shape
+- Write minimal Zod schemas for each external API response
+- `.safeParse()` on fetch result; log + return null if invalid; never crash on malformed external data
+- [ ] tfl.ts — Zod schema for journey planner + line status responses
+- [ ] weather.ts — Zod schema for Open-Meteo response
+- [ ] starling.ts — Zod schema for transactions + account response
+
+**C3 — Environment variable validation at startup**
+- `apps/api/src/index.ts` — add startup env validation before server starts
+- Use Zod to parse `process.env` on boot; throw with a clear error listing all missing vars if any are absent
+- Document all vars in `.env.example` with comments
+- Required vars: `DATABASE_URL`, `SESSION_SECRET`, `ENCRYPTION_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`, `HABITS_HEALTH_SECRET`, `LOCATION_INGEST_SECRET`, optional: `TFL_APP_KEY`, `SPOTIFY_APP_URL`
+- [ ] Zod env schema in apps/api/src/env.ts
+- [ ] Import and validate at the top of index.ts (before server starts)
+- [ ] Update .env.example with all vars + comments
+
+**C4 — Database indexes for tenant-scoped queries**
+- All tables queried with `WHERE tenant_id = ?` will full-scan as data grows
+- Add indexes on hot paths: `(tenant_id)` on all main tables, `(tenant_id, status)` on pages/journal_entries, `(tenant_id, date)` on habit_logs/transactions/journeys, `(tenant_id, type)` on spotify_data_cache
+- Add as a new migration (`0008_indexes.sql`)
+- [ ] Generate migration with all indexes
+- [ ] Run migration
+
+**C5 — Unsafe media uploads (public without auth)**
+- `/uploads/*` served as static files — anyone with the URL can access any uploaded file
+- Add the file to a per-tenant subdirectory (`/uploads/:tenantId/:filename`) so URLs are harder to enumerate
+- Gate `/uploads/:tenantId/*` behind tenant ownership check (or keep public but use unguessable UUIDs — they already use UUIDs, so document this as intentional)
+- [ ] Confirm uploads use UUID filenames (already implemented)
+- [ ] Move uploads into per-tenant subdirectory structure
+- [ ] Update media routes + static serving path
+
+---
+
+### Track D — Observability & Logging
+
+**D1 — Structured logging**
+- Replace `console.log/error` throughout the API with a structured logger
+- Install `pino` (fast, JSON output, works well with Node/Hono)
+- Log levels: `info` for request lifecycle, `warn` for recoverable errors, `error` for failures
+- Include: `level`, `msg`, `tenantId` (where available), `requestId`, `err` (on errors)
+- Add request ID middleware (generates `x-request-id` per request, attaches to log context)
+- [ ] Install pino + pino-pretty (dev)
+- [ ] Create logger instance in apps/api/src/lib/logger.ts
+- [ ] Replace console.log/error in routes, scheduler, and integration libs
+- [ ] Add request ID middleware
+
+**D2 — Status endpoints for integrations**
+- Starling, Spotify, health ingest schedulers should expose `lastSyncAt`, `lastError`, `nextSyncAt` via their status endpoints
+- `/starling/status`, `/spotify/status` already exist — enrich them with `lastError` field
+- [ ] Add lastError tracking to scheduler jobs
+- [ ] Expose via existing status endpoints
+
+---
+
+### Track E — Testing
+
+**E1 — Integration tests for auth flow**
+- The most critical path in the system — test it first
+- Use `vitest` + Hono's test client (`app.request()`) + a test database (or transaction rollback pattern)
+- Tests: signup creates user+tenant, login returns session cookie, `requireAuth` rejects unauthenticated requests, logout invalidates session, forgot-password + reset flow end-to-end
+- [ ] Install vitest + @hono/testing
+- [ ] Configure test database (separate `TEST_DATABASE_URL` or rollback fixture)
+- [ ] Write auth integration tests (signup, login, logout, reset)
+
+**E2 — Integration tests for core CRUD routes**
+- Cover the most business-critical routes with happy-path + auth guard tests
+- Pages: create, publish, fetch public; Journal: create, update, delete own entry, reject delete of other user's entry; Habits: log entry, check streak increments
+- [ ] Pages CRUD + publish flow tests
+- [ ] Journal CRUD + field-level auth tests
+- [ ] Habits log + streak tests
+
+**E3 — Unit tests for business logic**
+- Pure functions with no I/O are easiest to test and most valuable for demonstrating skills
+- Targets: `packages/core/src/schemas.ts` (Zod schema validation cases), merchant auto-categorisation rule engine, journey detection logic (split/merge algorithm), streak calculation logic, suggestion engine scoring function
+- [ ] Schema validation unit tests (valid + invalid inputs)
+- [ ] Merchant categorisation rule engine tests
+- [ ] Journey detection split logic tests
+- [ ] Streak calculation tests
+- [ ] Suggestion engine scoring tests
+
+**E4 — Set up CI with GitHub Actions**
+- `.github/workflows/ci.yml`: on push/PR to main — install deps, run `turbo build`, run `turbo test`
+- Add build status badge to README
+- [ ] .github/workflows/ci.yml (install, build, test)
+- [ ] README badge
+
+---
+
+### Track F — Minor Polish
+
+**F1 — Remove hardcoded constants**
+- Session duration, token expiry, upload size limit, rate limit windows — all hardcoded in route files
+- Move to a central `apps/api/src/config.ts` that reads from env with defaults
+- [ ] Create apps/api/src/config.ts with all tuneable constants
+
+**F2 — Share types properly between client and server**
+- `apps/cms/src/lib/api.ts` duplicates types already in `packages/core`
+- Audit and replace duplicates with imports from `@moducore/core`
+- [ ] Audit cms/src/lib/api.ts for duplicated types
+- [ ] Replace with imports from packages/core
+
+**F3 — Global error boundary in CMS frontend**
+- No React Error Boundary — an unhandled render error kills the whole app
+- Add `ErrorBoundary` wrapper in `apps/cms/src/App.tsx`
+- [ ] Add ErrorBoundary to CMS app root
+
+**F4 — API documentation**
+- Add a `docs/api.md` with a table of every endpoint: method, path, auth required, request body, response shape
+- Doubles as a reference for the portfolio — shows you can think about API contracts
+- [ ] Write docs/api.md covering all routes
+
+---
+
+**Done when:** no plaintext secrets in DB, XSS fixed, rate limiting on auth, session expiry enforced, all schedulers log errors, env validated at startup, DB indexed, 20+ tests passing in CI, structured logs, consistent API response shapes.
+
+---
+
 ## Future Phases (not yet scoped)
 
 - Additional connector adapters (Shopify, hospitality APIs, etc.)

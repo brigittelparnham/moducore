@@ -46,7 +46,11 @@ export async function getWeather(lat: number, lon: number, time?: Date): Promise
       weatherCode,
       isRaining: precipitation > 0.1 || (weatherCode >= 51 && weatherCode <= 99),
     }
-  } catch {
+  } catch (e) {
+    console.warn(
+      `[weather] Open-Meteo fetch failed (lat=${lat.toFixed(4)} lon=${lon.toFixed(4)}):`,
+      e instanceof Error ? e.message : e
+    )
     return null
   }
 }

@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import type { Block } from '../components/BlockEditor'
@@ -53,7 +54,7 @@ function RenderBlocks({ blocks, accentColor }: { blocks: Block[]; accentColor: s
             )
           }
           case 'text':
-            return <div key={block.id} style={{ fontSize: 16, lineHeight: 1.7, color: '#333', marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: block.html }} />
+            return <div key={block.id} style={{ fontSize: 16, lineHeight: 1.7, color: '#333', marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.html) }} />
           case 'image': {
             const widths = { full: '100%', wide: '80%', medium: '50%' }
             const aligns = { left: 'flex-start', center: 'center', right: 'flex-end' }
@@ -185,7 +186,7 @@ export function PublicPageView() {
         {Array.isArray(content.blocks) ? (
           <RenderBlocks blocks={content.blocks} accentColor={accentColor} />
         ) : content.html ? (
-          <div style={{ fontSize: 16, lineHeight: 1.7, color: '#333' }} dangerouslySetInnerHTML={{ __html: content.html }} />
+          <div style={{ fontSize: 16, lineHeight: 1.7, color: '#333' }} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.html) }} />
         ) : (
           <div style={{ fontSize: 16, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#333' }}>{content.text ?? ''}</div>
         )}

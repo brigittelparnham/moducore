@@ -17,11 +17,13 @@
     "@moducore/hub": "workspace:*",
     "@moducore/journal": "workspace:^",
     "@moducore/ui": "workspace:*",
+    "dompurify": "^3.3.3",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "react-router-dom": "^6.27.0"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",

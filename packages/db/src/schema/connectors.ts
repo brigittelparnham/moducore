@@ -6,8 +6,8 @@ export const connectors = pgTable('connectors', {
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   type: text('type').notNull(), // 'rss' | 'rest'
   name: text('name').notNull(),
-  // Note: config may contain sensitive values (API keys for REST connectors).
-  // TODO: encrypt at application layer before storing in production.
+  // config is encrypted at the application layer (AES-256-GCM) before storage.
+  // See apps/api/src/lib/secrets.ts — routes encrypt on write and decrypt on read.
   config: jsonb('config').notNull().default({}),
   enabled: boolean('enabled').notNull().default(true),
   lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),

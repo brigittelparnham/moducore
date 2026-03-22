@@ -124,13 +124,23 @@ export async function detectJourneysForTenant(db: ReturnType<typeof getDb>, tena
         tflEstimatedS = tflOptions[0].durationMinutes * 60
         tflRoute = tflOptions[0].legs
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn(
+        `[journey-detection] TfL plan failed (tenant=${tenantId} origin=${originLat.toFixed(4)},${originLon.toFixed(4)}):`,
+        e instanceof Error ? e.message : e
+      )
+    }
 
     // Weather snapshot at start (best-effort)
     let weatherSummary: unknown
     try {
       weatherSummary = await getWeather(originLat, originLon, seg.startedAt)
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn(
+        `[journey-detection] Weather fetch failed (tenant=${tenantId} lat=${originLat.toFixed(4)} lon=${originLon.toFixed(4)}):`,
+        e instanceof Error ? e.message : e
+      )
+    }
 
     // Match to a known route (within ~500m)
     const MATCH = 0.005

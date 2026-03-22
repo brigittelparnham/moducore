@@ -10,6 +10,7 @@ import {
 import { syncConnector } from '@moducore/integrations'
 import { getDb } from '../lib/db'
 import { requireAuth } from '../middleware/auth'
+import { encryptConfig, decryptConfig } from '../lib/secrets'
 import type { AppVariables } from '../types'
 
 export const connectorsRoutes = new Hono<{ Variables: AppVariables }>()
@@ -20,7 +21,9 @@ connectorsRoutes.use(requireAuth)
 connectorsRoutes.get('/', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
-  const connectors = await getConnectorsByTenant(db, tenant.id)
+  const rows = await getConnectorsByTenant(db, tenant.id)
+  // Decrypt config before sending to the client so they can see their own settings
+  const connectors = rows.map((r) => ({ ...r, config: decryptConfig(r.config) }))
   return c.json({ connectors })
 })
 
@@ -28,8 +31,9 @@ connectorsRoutes.get('/', async (c) => {
 connectorsRoutes.get('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
-  const connector = await getConnectorById(db, tenant.id, c.req.param('id'))
-  if (!connector) return c.json({ error: 'Not found' }, 404)
+  const row = await getConnectorById(db, tenant.id, c.req.param('id'))
+  if (!row) return c.json({ error: 'Not found' }, 404)
+  const connector = { ...row, config: decryptConfig(row.config) }
   return c.json({ connector })
 })
 
@@ -47,9 +51,10 @@ connectorsRoutes.post('/', async (c) => {
     tenantId: tenant.id,
     type: body.type,
     name: body.name,
-    config: body.config ?? {},
+    config: encryptConfig(body.config ?? {}),
   })
-  return c.json({ connector }, 201)
+  // Return decrypted config to the caller
+  return c.json({ connector: { ...connector, config: decryptConfig(connector.config) } }, 201)
 })
 
 // Update a connector (name, config, enabled)
@@ -57,8 +62,12 @@ connectorsRoutes.patch('/:id', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
   const body = await c.req.json<Partial<{ name: string; config: Record<string, unknown>; enabled: boolean }>>()
-  const connector = await updateConnector(db, tenant.id, c.req.param('id'), body)
-  if (!connector) return c.json({ error: 'Not found' }, 404)
+  const update = body.config !== undefined
+    ? { ...body, config: encryptConfig(body.config) }
+    : body
+  const row = await updateConnector(db, tenant.id, c.req.param('id'), update)
+  if (!row) return c.json({ error: 'Not found' }, 404)
+  const connector = { ...row, config: decryptConfig(row.config) }
   return c.json({ connector })
 })
 
@@ -76,7 +85,7 @@ connectorsRoutes.delete('/:id', async (c) => {
 connectorsRoutes.post('/:id/sync', async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
-  const result = await syncConnector(db, tenant.id, c.req.param('id'))
+  const result = await syncConnector(db, tenant.id, c.req.param('id'), decryptConfig)
   if (!result.ok) return c.json({ error: result.error }, 400)
   return c.json({ ok: true })
 })

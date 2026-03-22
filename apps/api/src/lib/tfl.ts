@@ -63,9 +63,13 @@ export async function planJourney(
   let data: Record<string, unknown>
   try {
     const res = await fetch(url)
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[tfl] planJourney returned HTTP ${res.status} for ${from} → ${to}`)
+      return []
+    }
     data = await res.json() as Record<string, unknown>
-  } catch {
+  } catch (e) {
+    console.warn('[tfl] planJourney fetch failed:', e instanceof Error ? e.message : e)
     return []
   }
 
@@ -113,7 +117,10 @@ export async function getLineStatuses(lineIds: string[]): Promise<LineStatus[]> 
 
   try {
     const res = await fetch(url)
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[tfl] getLineStatuses returned HTTP ${res.status} for lines: ${ids}`)
+      return []
+    }
     const data = await res.json() as unknown[]
     return data.map((line) => {
       const l = line as Record<string, unknown>
@@ -126,7 +133,8 @@ export async function getLineStatuses(lineIds: string[]): Promise<LineStatus[]> 
         statusDescription: String((first.statusSeverityDescription) ?? 'Good Service'),
       } satisfies LineStatus
     })
-  } catch {
+  } catch (e) {
+    console.warn('[tfl] getLineStatuses fetch failed:', e instanceof Error ? e.message : e)
     return []
   }
 }

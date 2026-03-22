@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify'
 import { useEffect, useState } from 'react'
 
 type Page = {
@@ -77,7 +78,7 @@ export function CMSPagesWidget({ token, apiUrl = 'http://localhost:3000' }: Prop
             {isOpen && html && (
               <div
                 style={{ marginTop: 12, fontSize: 15, lineHeight: 1.7, color: '#333' }}
-                dangerouslySetInnerHTML={{ __html: html }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
               />
             )}
           </div>
