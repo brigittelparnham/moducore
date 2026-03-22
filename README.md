@@ -1,11 +1,14 @@
 # moducore
 
+![CI](https://github.com/brigittelparnham/moducore/actions/workflows/ci.yml/badge.svg)
+
 A modular, composable content platform. Each application (CMS, journal, and more) can run standalone, compose together inside the CMS host, or be embedded into external sites as web components.
 
 ## Docs
 
 - [Architecture](docs/architecture.md) — system design, tech stack, composition model
 - [Database Schema](docs/database-schema.md) — PostgreSQL tables, conventions, indexes
+- [API Reference](docs/api.md) — all endpoints, auth, rate limits
 - [Roadmap](docs/roadmap.md) — build phases, decision log
 
 ## Stack

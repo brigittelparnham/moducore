@@ -10,6 +10,7 @@ import { logger } from '../lib/logger'
 import { getDb } from '../lib/db'
 import { SESSION_COOKIE, SESSION_DURATION_DAYS, requireAuth } from '../middleware/auth'
 import { authLimiter, signupLimiter } from '../middleware/rate-limit'
+import { PASSWORD_RESET_EXPIRY_MS } from '../config'
 import type { AppVariables } from '../types'
 import type { User } from '@moducore/db'
 
@@ -139,7 +140,7 @@ authRoutes.post('/forgot-password', authLimiter, zValidator('json', forgotPasswo
   const user = await getUserByEmail(db, email)
   if (user) {
     const token = generateToken()
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS)
     await setPasswordResetToken(db, user.id, token, expiresAt)
     sendPasswordResetEmail(user.email, user.name, token).catch((err: unknown) =>
       logger.error({ err }, 'Failed to send password reset email')

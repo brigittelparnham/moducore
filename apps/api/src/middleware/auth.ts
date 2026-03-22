@@ -8,11 +8,12 @@ import {
   isSessionValid,
 } from '@moducore/db'
 import { apiError } from '@moducore/core'
+import { SESSION_DURATION_DAYS } from '../config'
 import type { AppVariables } from '../types'
 import type { DbClient } from '@moducore/db'
 
 export const SESSION_COOKIE = 'moducore_session'
-export const SESSION_DURATION_DAYS = 30
+export { SESSION_DURATION_DAYS }
 
 // Resolves session from cookie and attaches user/tenant/member to context.
 // Does NOT reject unauthenticated requests — use requireAuth for that.

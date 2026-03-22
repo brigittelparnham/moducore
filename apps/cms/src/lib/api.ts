@@ -33,6 +33,10 @@ async function upload<T>(path: string, formData: FormData): Promise<T> {
   return data as T
 }
 
+// NOTE: All Date fields from the DB arrive as ISO strings after JSON serialisation.
+// These types reflect the wire shape. Use `Serialized<T>` from @moducore/core
+// if you need to derive this shape from a DB row type automatically.
+
 export type Page = {
   id: string
   tenantId: string

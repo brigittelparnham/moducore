@@ -9,6 +9,10 @@
  */
 
 import { rateLimiter } from 'hono-rate-limiter'
+import {
+  AUTH_RATE_LIMIT_WINDOW_MS, AUTH_RATE_LIMIT_MAX,
+  SIGNUP_RATE_LIMIT_WINDOW_MS, SIGNUP_RATE_LIMIT_MAX,
+} from '../config'
 
 function ipKey(c: Parameters<typeof rateLimiter>[0]['keyGenerator'] extends (c: infer C) => unknown ? C : never): string {
   return (
@@ -23,8 +27,8 @@ function ipKey(c: Parameters<typeof rateLimiter>[0]['keyGenerator'] extends (c: 
  * Aggressive enough to block brute force, forgiving enough for fat fingers.
  */
 export const authLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  limit: 10,
+  windowMs: AUTH_RATE_LIMIT_WINDOW_MS,
+  limit: AUTH_RATE_LIMIT_MAX,
   standardHeaders: 'draft-6',
   keyGenerator: ipKey,
 })
@@ -34,8 +38,8 @@ export const authLimiter = rateLimiter({
  * Prevents mass account creation while allowing normal usage.
  */
 export const signupLimiter = rateLimiter({
-  windowMs: 60 * 60 * 1000,  // 1 hour
-  limit: 5,
+  windowMs: SIGNUP_RATE_LIMIT_WINDOW_MS,
+  limit: SIGNUP_RATE_LIMIT_MAX,
   standardHeaders: 'draft-6',
   keyGenerator: ipKey,
 })

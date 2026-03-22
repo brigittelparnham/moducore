@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto'
 import { getMediaByTenant, getMediaById, createMediaRecord, deleteMediaRecord } from '@moducore/db'
 import { getDb } from '../lib/db'
 import { requireAuth, requireRole } from '../middleware/auth'
+import { UPLOAD_MAX_BYTES } from '../config'
 import type { AppVariables } from '../types'
 
 export const mediaRoutes = new Hono<{ Variables: AppVariables }>()
@@ -30,7 +31,7 @@ const MIME_TO_EXT: Record<string, string> = {
   'application/pdf': '.pdf',
 }
 
-const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
+const MAX_BYTES = UPLOAD_MAX_BYTES
 
 function getUploadsDir(tenantId?: string): string {
   return tenantId

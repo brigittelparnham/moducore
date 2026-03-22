@@ -6,10 +6,11 @@ import { syncSpotifyForTenant } from './routes/spotify'
 import { detectJourneysForTenant } from './lib/journey-detection'
 import { syncStarlingAccount } from './lib/starling'
 import { decryptField, decryptConfig } from './lib/secrets'
-
-const INTERVAL_MS = 15 * 60 * 1000       // 15 minutes
-const JOURNEY_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
-const SESSION_CLEANUP_MS = 24 * 60 * 60 * 1000 // 24 hours
+import {
+  SCHEDULER_INTERVAL_MS,
+  JOURNEY_INTERVAL_MS,
+  SESSION_CLEANUP_INTERVAL_MS,
+} from './config'
 
 // ─── D2: In-memory job status tracking ────────────────────────────────────────
 
@@ -43,13 +44,13 @@ export function startScheduler(): void {
   logger.info('[scheduler] Starting — syncing every 15 minutes, journey detection every 5 minutes')
 
   setTimeout(async () => { await runSync() }, 5000)
-  setInterval(async () => { await runSync() }, INTERVAL_MS)
+  setInterval(async () => { await runSync() }, SCHEDULER_INTERVAL_MS)
 
   // Journey detection runs more frequently
   setInterval(async () => { await runJourneyDetection() }, JOURNEY_INTERVAL_MS)
 
   // Expired session cleanup runs once per day
-  setInterval(async () => { await runSessionCleanup() }, SESSION_CLEANUP_MS)
+  setInterval(async () => { await runSessionCleanup() }, SESSION_CLEANUP_INTERVAL_MS)
 }
 
 // ─── Sync jobs ────────────────────────────────────────────────────────────────
