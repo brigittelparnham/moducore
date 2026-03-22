@@ -15,9 +15,10 @@
     "@moducore/core": "workspace:*",
     "@moducore/db": "workspace:*",
     "@moducore/integrations": "workspace:*",
-    "drizzle-orm": "^0.33.0",
     "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.33.0",
     "hono": "^4.6.0",
+    "hono-rate-limiter": "^0.5.3",
     "resend": "^6.9.3",
     "zod": "^3.23.0"
   },

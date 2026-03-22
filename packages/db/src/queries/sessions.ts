@@ -7,9 +7,13 @@ export async function createSession(db: DbClient, data: NewSession): Promise<Ses
   return session
 }
 
+/**
+ * Returns the session only if it exists AND has not expired.
+ * Filtering at the DB level avoids an extra round-trip for stale tokens.
+ */
 export async function getSessionByToken(db: DbClient, token: string): Promise<Session | undefined> {
   return db.query.sessions.findFirst({
-    where: (s, { eq }) => eq(s.token, token),
+    where: (s, { eq, and, gt }) => and(eq(s.token, token), gt(s.expiresAt, new Date())),
   })
 }
 

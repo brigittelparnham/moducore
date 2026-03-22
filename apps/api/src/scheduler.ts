@@ -1,13 +1,14 @@
 import { syncAllConnectors } from '@moducore/integrations'
-import { getAllConnectedSpotify, getAccounts } from '@moducore/db'
+import { getAllConnectedSpotify, getAccounts, deleteExpiredSessions } from '@moducore/db'
 import { getDb } from './lib/db'
 import { syncSpotifyForTenant } from './routes/spotify'
 import { detectJourneysForTenant } from './lib/journey-detection'
 import { syncStarlingAccount } from './lib/starling'
 import { decryptField, decryptConfig } from './lib/secrets'
 
-const INTERVAL_MS = 15 * 60 * 1000 // 15 minutes
+const INTERVAL_MS = 15 * 60 * 1000       // 15 minutes
 const JOURNEY_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+const SESSION_CLEANUP_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 export function startScheduler(): void {
   console.log('[scheduler] Starting — syncing every 15 minutes, journey detection every 5 minutes')
@@ -17,6 +18,9 @@ export function startScheduler(): void {
 
   // Journey detection runs more frequently
   setInterval(async () => { await runJourneyDetection() }, JOURNEY_INTERVAL_MS)
+
+  // Expired session cleanup runs once per day
+  setInterval(async () => { await runSessionCleanup() }, SESSION_CLEANUP_MS)
 }
 
 async function runSync() {
@@ -61,6 +65,16 @@ async function runSync() {
     }
   } catch (e) {
     console.error('[scheduler] Starling sync failed:', e)
+  }
+}
+
+async function runSessionCleanup() {
+  const db = getDb()
+  try {
+    await deleteExpiredSessions(db)
+    console.log('[scheduler] Expired sessions cleaned up')
+  } catch (e) {
+    console.error('[scheduler] Session cleanup failed:', e)
   }
 }
 

@@ -1,3 +1,10 @@
+/**
+ * Authorization model for habits and finance:
+ * Both are tenant-scoped shared resources (habits are household goals,
+ * finances are shared accounts). All authenticated tenant members have
+ * read/write access to all data in their tenant. Tenant isolation via
+ * tenant_id on every query is the security boundary — not per-user ownership.
+ */
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'

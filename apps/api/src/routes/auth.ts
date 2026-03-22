@@ -7,6 +7,7 @@ import { hashPassword, verifyPassword, generateToken } from '../lib/crypto'
 import { sendWelcomeEmail, sendPasswordResetEmail } from '../lib/email'
 import { getDb } from '../lib/db'
 import { SESSION_COOKIE, SESSION_DURATION_DAYS, requireAuth } from '../middleware/auth'
+import { authLimiter, signupLimiter } from '../middleware/rate-limit'
 import type { AppVariables } from '../types'
 import type { User } from '@moducore/db'
 
@@ -43,7 +44,7 @@ async function createAndSetSession(
 }
 
 // POST /auth/signup
-authRoutes.post('/signup', zValidator('json', signupSchema), async (c) => {
+authRoutes.post('/signup', signupLimiter, zValidator('json', signupSchema), async (c) => {
   const db = getDb()
   const { name, email, password, tenantName, tenantSlug, appSlug } = c.req.valid('json')
 
@@ -82,7 +83,7 @@ authRoutes.post('/signup', zValidator('json', signupSchema), async (c) => {
 })
 
 // POST /auth/login
-authRoutes.post('/login', zValidator('json', loginSchema), async (c) => {
+authRoutes.post('/login', authLimiter, zValidator('json', loginSchema), async (c) => {
   const db = getDb()
   const { email, password } = c.req.valid('json')
 
@@ -128,7 +129,7 @@ authRoutes.post('/logout', async (c) => {
 })
 
 // POST /auth/forgot-password
-authRoutes.post('/forgot-password', zValidator('json', forgotPasswordSchema), async (c) => {
+authRoutes.post('/forgot-password', authLimiter, zValidator('json', forgotPasswordSchema), async (c) => {
   const db = getDb()
   const { email } = c.req.valid('json')
 
@@ -147,7 +148,7 @@ authRoutes.post('/forgot-password', zValidator('json', forgotPasswordSchema), as
 })
 
 // POST /auth/reset-password
-authRoutes.post('/reset-password', zValidator('json', resetPasswordSchema), async (c) => {
+authRoutes.post('/reset-password', authLimiter, zValidator('json', resetPasswordSchema), async (c) => {
   const db = getDb()
   const { token, password } = c.req.valid('json')
 

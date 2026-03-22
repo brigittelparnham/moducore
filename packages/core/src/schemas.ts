@@ -11,10 +11,16 @@ export const contentStatusSchema = z.enum(['draft', 'published'])
 
 export const userRoleSchema = z.enum(['owner', 'admin', 'member'])
 
+const passwordSchema = z
+  .string()
+  .min(12, 'Password must be at least 12 characters')
+  .regex(/\d/, 'Password must contain at least one number')
+  .regex(/[^a-zA-Z0-9]/, 'Password must contain at least one special character')
+
 export const signupSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
   tenantName: z.string().min(1, 'Workspace name is required'),
   tenantSlug: z
     .string()
@@ -79,7 +85,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: passwordSchema,
 })
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>

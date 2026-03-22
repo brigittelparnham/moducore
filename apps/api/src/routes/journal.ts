@@ -51,12 +51,23 @@ journalRoutes.get('/:id', async (c) => {
   return c.json({ entry })
 })
 
-// PATCH /journal/:id
+// PATCH /journal/:id — members can only edit their own entries; admin/owner can edit any
 journalRoutes.patch('/:id', requireRole('member'), zValidator('json', updateJournalEntrySchema), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
+  const user = c.get('user')!
+  const member = c.get('tenantMember')!
+
+  const existing = await getJournalEntryById(db, tenant.id, c.req.param('id'))
+  if (!existing) return c.json({ error: 'Entry not found' }, 404)
+
+  const roleRank = { owner: 3, admin: 2, member: 1 }
+  const isAdmin = roleRank[member.role] >= roleRank['admin']
+  if (!isAdmin && existing.createdBy !== user.id) {
+    return c.json({ error: 'Forbidden — you can only edit your own entries' }, 403)
+  }
+
   const entry = await updateJournalEntry(db, tenant.id, c.req.param('id'), c.req.valid('json'))
-  if (!entry) return c.json({ error: 'Entry not found' }, 404)
   return c.json({ entry })
 })
 
@@ -78,12 +89,22 @@ journalRoutes.post('/:id/unpublish', requireRole('member'), async (c) => {
   return c.json({ entry })
 })
 
-// DELETE /journal/:id
-journalRoutes.delete('/:id', requireRole('admin'), async (c) => {
+// DELETE /journal/:id — members can delete own entries; admin/owner can delete any
+journalRoutes.delete('/:id', requireRole('member'), async (c) => {
   const db = getDb()
   const tenant = c.get('tenant')!
+  const user = c.get('user')!
+  const member = c.get('tenantMember')!
+
   const existing = await getJournalEntryById(db, tenant.id, c.req.param('id'))
   if (!existing) return c.json({ error: 'Entry not found' }, 404)
+
+  const roleRank = { owner: 3, admin: 2, member: 1 }
+  const isAdmin = roleRank[member.role] >= roleRank['admin']
+  if (!isAdmin && existing.createdBy !== user.id) {
+    return c.json({ error: 'Forbidden — you can only delete your own entries' }, 403)
+  }
+
   await deleteJournalEntry(db, tenant.id, c.req.param('id'))
   return c.json({ ok: true })
 })
