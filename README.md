@@ -2,6 +2,8 @@
 
 ![CI](https://github.com/brigittelparnham/moducore/actions/workflows/ci.yml/badge.svg)
 
+Note: This is an ongoing personal project built in spare time around a full-time job. It's a work in progress — actively developed but intentionally unfinished. Some apps are more complete than others.
+
 A suite of personal apps that work standalone, compose inside a shared CMS, and embed anywhere as web components. Multi-tenant, fully custom backend, no third-party auth or BaaS.
 
 ---
