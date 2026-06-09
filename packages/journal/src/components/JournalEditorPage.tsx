@@ -13,6 +13,7 @@ const S = {
   coral: '#ff8a5b',
   mint: '#7fd1b9',
   lemon: '#ffd86b',
+  sky: '#9aa8ff',
 }
 const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
 const hand = "'Caveat', 'Patrick Hand', cursive"
@@ -143,65 +144,124 @@ export function JournalEditorPage({ entryId, onBack, onCreated }: Props) {
         </div>
       </div>
 
-      {/* editor body */}
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px', position: 'relative', zIndex: 1 }}>
-        {error && (
-          <p style={{ fontFamily: body, fontSize: 13, color: S.coral, marginBottom: 16 }}>{error}</p>
-        )}
+      {/* editor body — two column when context exists */}
+      <div style={{
+        maxWidth: entry ? 1060 : 720,
+        margin: '0 auto',
+        padding: '32px 20px',
+        position: 'relative',
+        zIndex: 1,
+        display: 'grid',
+        gridTemplateColumns: entry ? '1fr 260px' : '1fr',
+        gap: 28,
+        alignItems: 'start',
+      }}>
 
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="entry title…"
-          style={{
-            width: '100%',
-            fontFamily: hand,
-            fontSize: 36,
-            color: S.ink,
-            border: 'none',
-            borderBottom: `1.5px solid rgba(34,26,22,0.12)`,
-            padding: '6px 0',
-            marginBottom: 14,
-            outline: 'none',
-            boxSizing: 'border-box',
-            background: 'transparent',
-          }}
-        />
+        {/* ── Left: lined paper card ── */}
+        <div style={{
+          background: '#fff',
+          boxShadow: '0 22px 44px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
+          padding: '40px 48px 40px 64px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* horizontal ruled lines */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `linear-gradient(${S.sky}28 1px, transparent 1px)`,
+            backgroundSize: '100% 34px',
+            backgroundPosition: '0 72px',
+            pointerEvents: 'none',
+          }} />
+          {/* red margin line */}
+          <div style={{
+            position: 'absolute',
+            top: 0, bottom: 0, left: 48, width: 1,
+            background: '#e8425b',
+            opacity: 0.45,
+            pointerEvents: 'none',
+          }} />
+          {/* lemon fade at bottom */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0, left: 0, right: 0, height: 60,
+            background: `linear-gradient(180deg, transparent, ${S.lemon}28)`,
+            pointerEvents: 'none',
+          }} />
 
-        <input
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="tags, comma-separated"
-          style={{
-            width: '100%',
-            fontFamily: mono,
-            fontSize: 11,
-            letterSpacing: '0.1em',
-            border: `1.5px solid rgba(34,26,22,0.15)`,
-            borderRadius: 3,
-            padding: '7px 12px',
-            marginBottom: 20,
-            boxSizing: 'border-box',
-            outline: 'none',
-            background: '#fffdf8',
-            color: S.inkSoft,
-          }}
-        />
+          {/* date stamp */}
+          {entry && (
+            <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: '0.2em', opacity: 0.5, marginBottom: 16, position: 'relative' }}>
+              {new Date(entry.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}
+            </div>
+          )}
 
-        {entry && (
-          <DayContextPanel
-            date={entry.createdAt.slice(0, 10)}
-            apiBase={apiBase}
+          {error && (
+            <p style={{ fontFamily: body, fontSize: 13, color: S.coral, marginBottom: 16, position: 'relative' }}>{error}</p>
+          )}
+
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="entry title…"
+            style={{
+              width: '100%',
+              fontFamily: hand,
+              fontSize: 56,
+              lineHeight: 1,
+              color: S.ink,
+              border: 'none',
+              padding: '0 0 12px',
+              marginBottom: 20,
+              outline: 'none',
+              boxSizing: 'border-box',
+              background: 'transparent',
+              letterSpacing: '-0.01em',
+              position: 'relative',
+            }}
           />
-        )}
 
-        <RichTextEditor
-          key={entryId ?? 'new'}
-          initialContent={body2}
-          onChange={setBody2}
-          placeholder="write your entry…"
-          minHeight={400}
-        />
+          <div style={{ position: 'relative', marginBottom: 24 }}>
+            <RichTextEditor
+              key={entryId ?? 'new'}
+              initialContent={body2}
+              onChange={setBody2}
+              placeholder="write your entry…"
+              minHeight={360}
+            />
+          </div>
+
+          {/* tags row */}
+          <div style={{ position: 'relative', borderTop: `1px dashed rgba(34,26,22,0.12)`, paddingTop: 14 }}>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="tags, comma-separated"
+              style={{
+                width: '100%',
+                fontFamily: mono,
+                fontSize: 11,
+                letterSpacing: '0.1em',
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                color: S.inkSoft,
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ── Right: day context stickies (existing entries only) ── */}
+        {entry && (
+          <div style={{ paddingTop: 8 }}>
+            <DayContextPanel
+              date={entry.createdAt.slice(0, 10)}
+              apiBase={apiBase}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

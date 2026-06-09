@@ -240,7 +240,8 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 
 ### packages/journal (used in apps/journal port 3002)
 - **JournalListPage** — paper bg, dot grid, paperD header, `words you've written.` heading with lemon Caveat accent, paper cards, mono status pills, ink new-entry pill
-- **JournalEditorPage** — full-page paper bg, dot grid, paperD toolbar, Caveat title input (36px, transparent, ink border-bottom), mono tags input, back/publish/save buttons as pills
+- **JournalEditorPage** — two-column layout for existing entries (paper left, stickies right); white paper card with CSS horizontal ruled lines (sky tint, 34px grid) + red margin line (left 48px) + lemon bottom fade; Caveat title at 56px; mono date stamp; tags moved to dashed bottom border row inside card
+- **DayContextPanel** — rewritten as coloured sticky notes: mint (music, waveform SVG), lemon (travel, path SVG), rose (habits, 14-dot mini grid); each with pin, mono uppercase label, Caveat content; italic Caveat footnote at bottom; shown in right column, hidden on new entries
 
 ---
 
@@ -251,7 +252,7 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 | 1 | Welcome to the studio | ⚠️ Partial | Landing exists but simplified — no 120px hero, no floating polaroid cluster, no scribble SVG arrows |
 | 2 | Onboarding — roll a seed | ✅ Built | `apps/cms/src/pages/OnboardingPage.tsx` — seed wall + preview card + reshuffle + custom input. Seed stored in localStorage via `getDesignSeed`/`setDesignSeed` from `@moducore/hub`. Triggered from signup. |
 | 3 | My board — apps as stickers | ❌ Not built | Home is a static card grid, not a draggable pinboard with live sticker widgets |
-| 4 | Journal entry — kiln day | ⚠️ Partial | Editor has Studio styling; missing lined paper guides, embedded polaroid image, DayContext panel as stickers |
+| 4 | Journal entry — kiln day | ⚠️ Partial | Lined paper + sticker DayContext done; still missing embedded polaroid image in entry body |
 | 5 | Music — listening life | ⚠️ Partial | Charts + Studio tokens done; missing album polaroid, wavy waveform, listening heatmap, era sticky |
 | 6 | Travel polaroid | ⚠️ Partial | Maps app done; missing hand-drawn SVG map, compass rose, journey annotation text on map |
 | 7 | Lifestyle — reps + finance | ⚠️ Partial | 14-day circle grid built (`HabitGrid`); still missing steps polaroid with radial ring |
@@ -265,7 +266,6 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 | Piece | What it is | Needed for |
 |-------|-----------|-----------|
 | Board canvas engine | Freeform drag/rotate/peel pinboard of live sticker widgets | Screen 3 |
-| `StickerMark` in DayContext pills | Per-app marks instead of text labels in journal day summary | Screen 4 |
 | Hand-drawn map SVG | SVG with river, park, roads, journey path, compass | Screen 6 |
 | Steps polaroid with radial ring | SVG ring showing daily steps progress | Screen 7 |
 | Public portfolio route | `/p/:slug` public site from CMS published pages + personal data | Screen 8 |
