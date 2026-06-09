@@ -38,6 +38,7 @@ export function AppShellLayout() {
   const isActive = (prefix: string) => location.pathname === prefix || location.pathname.startsWith(prefix + '/')
 
   const navLinks = [
+    { to: '/board', label: 'board' },
     { to: '/pages', label: 'pages' },
     ...(installedSlugs.has('journal') ? [{ to: '/journal', label: 'journal' }] : []),
     ...(installedSlugs.has('spotify') ? [{ to: '/music', label: 'music' }] : []),

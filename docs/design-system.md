@@ -238,6 +238,31 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 - **GenreChart** (ListeningHours) — Caveat heading, mono subtitle, D3 bars changed to sky `#9aa8ff`
 - **VibeBoard** (MusicEras) — Caveat heading, D3 bars changed to coral `#ff8a5b`
 
+### apps/cms — BoardPage (port 3001, route `/board`)
+Full-screen pinboard canvas, no CMS nav shell (own top bar). Accessible from the "board" link in the CMS nav. Reachable from any app via the AppSwitcher.
+
+- **Top bar** — mono uppercase, `my board · [firstname] · saved HH:MM`; mint autosave dot goes live on first drag-save; `← cms` back link far left
+- **Day heading** — `{weekday} {day} {month}.` in Space Grotesk 56px bold + coral Caveat 64px day number; step count in Caveat 26px coral on the right (from habits day-summary)
+- **Drag engine** — raw `mousedown/mousemove/mouseup` on `document`, no library; widget positions stored as `{ x, y }` per widget ID; debounce-saved to `moducore_board_layout` in localStorage 400ms after drag ends
+- **DraggableWidget** — per-widget `useRef` drag state; `useCallback` for stable drag handler; `position: absolute` within the board canvas
+- **Board primitives** — `Pin`, `TapeStrip`, `Sticky`, `Polaroid` defined locally (same visual pattern as DayContextPanel/OnboardingPage)
+
+**6 live widget types** (all draggable, all fetch real API data):
+
+| Widget | Color | Data source |
+|--------|-------|-------------|
+| Journal polaroid | white | `GET /journal/entries?limit=1` — latest entry title + stripped body snippet |
+| Music sticky | mint | `GET /spotify/day-summary?date=today` — track count + top artist |
+| Maps polaroid | paperD | `GET /maps/day-summary?date=today` — journey count + km; StickerMark maps mark |
+| Habits sticky | lemon | `GET /habits/day-summary?date=today` — completed/total habits |
+| Website sticky | sky | `GET /pages` — published page count |
+| Finance sticky | rose | habits `spendingTotal` for today; falls back to `GET /finance/accounts` balance |
+
+**Static elements** (not draggable):
+- Mood polaroid — hand-drawn SVG smiley on coral/lemon gradient; no data
+- Drag hint text — italic Caveat "← drag, rotate, peel. your board, your mess." + scribble SVG arrow
+- Dashed drop zone — "+ new sticker / OR DROP AN APP" (visual only, not wired)
+
 ### packages/journal (used in apps/journal port 3002)
 - **JournalListPage** — paper bg, dot grid, paperD header, `words you've written.` heading with lemon Caveat accent, paper cards, mono status pills, ink new-entry pill
 - **JournalEditorPage** — two-column layout for existing entries (paper left, stickies right); white paper card with CSS horizontal ruled lines (sky tint, 34px grid) + red margin line (left 48px) + lemon bottom fade; Caveat title at 56px; mono date stamp; tags moved to dashed bottom border row inside card
@@ -251,7 +276,7 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 |---|--------|--------|-----|
 | 1 | Welcome to the studio | ⚠️ Partial | Landing exists but simplified — no 120px hero, no floating polaroid cluster, no scribble SVG arrows |
 | 2 | Onboarding — roll a seed | ✅ Built | `apps/cms/src/pages/OnboardingPage.tsx` — seed wall + preview card + reshuffle + custom input. Seed stored in localStorage via `getDesignSeed`/`setDesignSeed` from `@moducore/hub`. Triggered from signup. |
-| 3 | My board — apps as stickers | ❌ Not built | Home is a static card grid, not a draggable pinboard with live sticker widgets |
+| 3 | My board — apps as stickers | ✅ Built | `apps/cms/src/pages/BoardPage.tsx` — full-screen canvas at `/board`; 6 draggable sticker widgets (journal polaroid, music sticky, maps polaroid, habits sticky, website sticky, finance sticky + mood polaroid); freeform mouse drag with localStorage persistence; day heading + step count; autosave indicator; "← cms" back link; accessible from CMS nav "board" link. |
 | 4 | Journal entry — kiln day | ⚠️ Partial | Lined paper + sticker DayContext done; still missing embedded polaroid image in entry body |
 | 5 | Music — listening life | ⚠️ Partial | Charts + Studio tokens done; missing album polaroid, wavy waveform, listening heatmap, era sticky |
 | 6 | Travel polaroid | ⚠️ Partial | Maps app done; missing hand-drawn SVG map, compass rose, journey annotation text on map |
@@ -265,7 +290,7 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 
 | Piece | What it is | Needed for |
 |-------|-----------|-----------|
-| Board canvas engine | Freeform drag/rotate/peel pinboard of live sticker widgets | Screen 3 |
+| ~~Board canvas engine~~ | ~~Freeform drag/rotate/peel pinboard of live sticker widgets~~ | ~~Screen 3~~ ✅ |
 | Hand-drawn map SVG | SVG with river, park, roads, journey path, compass | Screen 6 |
 | Steps polaroid with radial ring | SVG ring showing daily steps progress | Screen 7 |
 | Public portfolio route | `/p/:slug` public site from CMS published pages + personal data | Screen 8 |

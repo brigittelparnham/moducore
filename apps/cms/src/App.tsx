@@ -20,6 +20,7 @@ import { MapsFeedPage } from './pages/MapsFeedPage'
 import { LifestyleFeedPage } from './pages/LifestyleFeedPage'
 import { MediaPage } from './pages/MediaPage'
 import { OnboardingPage } from './pages/OnboardingPage'
+import { BoardPage } from './pages/BoardPage'
 
 export function App() {
   return (
@@ -34,6 +35,16 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/p/:tenantSlug/:slug" element={<PublicPageView />} />
+
+          {/* ── Board — authenticated, full-screen canvas, no AppShell nav ── */}
+          <Route
+            path="/board"
+            element={
+              <ProtectedRoute>
+                <BoardPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ── Authenticated routes — all wrapped in AppShell ── */}
           <Route
