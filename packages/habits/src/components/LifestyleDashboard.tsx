@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useHabits } from '../context'
 import { createHabitsApi } from '../api'
-import type { Habit, Account, Category, Transaction, Reward, StreakInfo } from '../types'
-import { HabitCard } from './HabitCard'
+import type { Habit, HabitLog, Account, Category, Transaction, Reward, StreakInfo } from '../types'
+import { HabitGrid } from './HabitGrid'
 import { RewardCard, PointsWidget } from './RewardCard'
 import { TransactionRow } from './TransactionRow'
 import { TransactionForm } from './TransactionForm'
@@ -45,6 +45,7 @@ export function LifestyleDashboard() {
   const [categories, setCategories] = useState<Category[]>([])
   const [budgetLines, setBudgetLines] = useState<import('../types').BudgetLine[]>([])
   const [showAddTx, setShowAddTx] = useState(false)
+  const [logsPerHabit, setLogsPerHabit] = useState<Record<string, HabitLog[]>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,12 +67,19 @@ export function LifestyleDashboard() {
         setTransactions(t.transactions)
         setCategories(c.categories)
         setBudgetLines(b.budget)
-        return Promise.all(a.accounts.map((acc) => api.accounts.get(acc.id)))
+        return Promise.all([
+          Promise.all(a.accounts.map((acc) => api.accounts.get(acc.id))),
+          Promise.all(h.habits.map((habit) => api.habits.logs(habit.id, 30).then((res) => ({ habitId: habit.id, logs: res.logs })))),
+        ])
       })
-      .then((details) => {
-        const map: Record<string, number> = {}
-        for (const d of details) map[d.account.id] = d.balance
-        setBalances(map)
+      .then(([details, habitLogs]) => {
+        const balMap: Record<string, number> = {}
+        for (const d of details) balMap[d.account.id] = d.balance
+        setBalances(balMap)
+
+        const logMap: Record<string, HabitLog[]> = {}
+        for (const { habitId, logs } of habitLogs) logMap[habitId] = logs
+        setLogsPerHabit(logMap)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -174,25 +182,15 @@ export function LifestyleDashboard() {
             {/* Habits grid card */}
             <div style={paperCard(-0.5)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-                <div style={{ fontFamily: hand, fontSize: 28, color: S.ink }}>today's reps ↘</div>
+                <div style={{ fontFamily: hand, fontSize: 30, color: S.ink }}>the reps ↘ last 14 days</div>
                 <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.2em', opacity: 0.55 }}>TAP + TO LOG</div>
               </div>
-              {todayHabits.length === 0 ? (
-                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>
-                  no daily habits yet. add some in settings →
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {todayHabits.map((h) => (
-                    <HabitCard
-                      key={h.id}
-                      habit={h}
-                      streak={todayStreakMap[h.id] ?? 0}
-                      onLog={handleLog}
-                    />
-                  ))}
-                </div>
-              )}
+              <HabitGrid
+                habits={todayHabits}
+                logsPerHabit={logsPerHabit}
+                streakMap={todayStreakMap}
+                onLog={handleLog}
+              />
             </div>
 
             {/* Streak + recent spend side-by-side */}

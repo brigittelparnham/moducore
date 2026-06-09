@@ -215,8 +215,9 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 - **DashboardPage** — stat cards with slight rotation, accent colour bar at top, Caveat large number display (52px), quick action ink pill + ghost buttons
 
 ### packages/habits (used in apps/habits port 3005)
-- **LifestyleDashboard** — paper bg, dot grid, paperD header tabs
-- **HabitCard** — Caveat habit name, mono progress label, coral/mint/lemon progress bar
+- **LifestyleDashboard** — paper bg, dot grid, paperD header tabs; fetches 30 days of logs per habit to power HabitGrid
+- **HabitGrid** — replaces progress bars with the 14-day circle grid from the spec: one compact paper card, per-habit row with name + streak, 14 coloured circles (filled = logged, alternating ±3deg rotation, today glows), percentage, inline log form on `+`
+- **HabitCard** — Caveat habit name, mono progress label, coral/mint/lemon progress bar (kept for detail/manage views)
 - **BudgetProgress** — mono category label, ink fill bar, coral if over budget
 - **TransactionRow** — mono amount, Caveat merchant name, ink category pill
 - **RewardCard** — Caveat reward name, mint/lemon status pill
@@ -253,7 +254,7 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 | 4 | Journal entry — kiln day | ⚠️ Partial | Editor has Studio styling; missing lined paper guides, embedded polaroid image, DayContext panel as stickers |
 | 5 | Music — listening life | ⚠️ Partial | Charts + Studio tokens done; missing album polaroid, wavy waveform, listening heatmap, era sticky |
 | 6 | Travel polaroid | ⚠️ Partial | Maps app done; missing hand-drawn SVG map, compass rose, journey annotation text on map |
-| 7 | Lifestyle — reps + finance | ⚠️ Partial | Habits done; missing 14-day circle grid per habit, steps polaroid with radial ring |
+| 7 | Lifestyle — reps + finance | ⚠️ Partial | 14-day circle grid built (`HabitGrid`); still missing steps polaroid with radial ring |
 | 8 | Public portfolio — brigitte.studio | ❌ Not built | No public portfolio / personal site view |
 | 9 | Sticker drawer — customise | ❌ Not built | No palette picker, font picker, mess level slider, or seed reshuffle panel |
 
@@ -266,7 +267,6 @@ Full Studio redesign. Paper background, dot grid, sticky nav (Caveat brand), her
 | Board canvas engine | Freeform drag/rotate/peel pinboard of live sticker widgets | Screen 3 |
 | `StickerMark` in DayContext pills | Per-app marks instead of text labels in journal day summary | Screen 4 |
 | Hand-drawn map SVG | SVG with river, park, roads, journey path, compass | Screen 6 |
-| 14-day habit circle grid | SVG circle grid per habit replacing progress bars | Screen 7 |
 | Steps polaroid with radial ring | SVG ring showing daily steps progress | Screen 7 |
 | Public portfolio route | `/p/:slug` public site from CMS published pages + personal data | Screen 8 |
 | Sticker drawer panel | Palette/font/mess/seed customisation stored in localStorage or user prefs | Screen 9 |
