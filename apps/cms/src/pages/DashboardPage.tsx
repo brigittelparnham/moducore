@@ -21,7 +21,7 @@ const mono = "'JetBrains Mono', monospace"
 const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
 export function DashboardPage() {
-  const { tenant, user } = useAuth()
+  const { tenant } = useAuth()
   const [stats, setStats] = useState<{ pages: number; media: number } | null>(null)
 
   useEffect(() => {

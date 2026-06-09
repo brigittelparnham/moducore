@@ -1,3 +1,6 @@
+import { StickerMark } from '@moducore/ui'
+import type { StickerPalette } from '@moducore/ui'
+
 const CMS_URL = import.meta.env.VITE_CMS_URL ?? 'http://localhost:3001'
 const JOURNAL_URL = import.meta.env.VITE_JOURNAL_URL ?? 'http://localhost:3002'
 const SPOTIFY_URL = import.meta.env.VITE_SPOTIFY_URL ?? 'http://localhost:3003'
@@ -26,9 +29,10 @@ type App = {
   description: string
   url: string
   accent: string
-  icon: string
+  palette: StickerPalette
   tapeAngle: number
   rotate: number
+  seed: number
 }
 
 const apps: App[] = [
@@ -39,9 +43,10 @@ const apps: App[] = [
     description: 'Create pages, manage your site, connect apps, and control everything from one place. Your home base.',
     url: CMS_URL,
     accent: S.ink,
-    icon: '⬡',
+    palette: { ink: S.ink, a: S.coral, b: S.mint, c: S.lemon, d: S.sky },
     tapeAngle: -3,
     rotate: -0.6,
+    seed: 7,
   },
   {
     slug: 'journal',
@@ -50,20 +55,22 @@ const apps: App[] = [
     description: 'A private writing space. Rich text, tags, and a streak to keep you going.',
     url: JOURNAL_URL,
     accent: S.lemon,
-    icon: '✦',
+    palette: { ink: S.ink, a: S.coral, b: S.mint, c: S.lemon, d: S.sky },
     tapeAngle: 2,
     rotate: 0.8,
+    seed: 42,
   },
   {
     slug: 'spotify',
     name: 'music',
     tagline: 'your listening life',
-    description: 'Connect Spotify to see what you\'ve been listening to — top tracks, artists, and era breakdowns.',
+    description: "Connect Spotify to see what you've been listening to — top tracks, artists, and era breakdowns.",
     url: SPOTIFY_URL,
     accent: S.coral,
-    icon: '♫',
+    palette: { ink: S.ink, a: S.coral, b: S.mint, c: S.lemon, d: S.sky },
     tapeAngle: -4,
     rotate: -1.1,
+    seed: 11,
   },
   {
     slug: 'maps',
@@ -72,9 +79,10 @@ const apps: App[] = [
     description: 'Track where you go with OwnTracks. Auto-detect journeys, commute intelligence, and TfL at a glance.',
     url: MAPS_URL,
     accent: S.sky,
-    icon: '◎',
+    palette: { ink: S.ink, a: S.coral, b: S.mint, c: S.lemon, d: S.sky },
     tapeAngle: 3,
     rotate: 0.5,
+    seed: 23,
   },
   {
     slug: 'habits',
@@ -83,9 +91,10 @@ const apps: App[] = [
     description: 'Track habits, set limits, earn rewards. Finance tracking with auto-categorisation and Starling sync.',
     url: HABITS_URL,
     accent: S.mint,
-    icon: '◈',
+    palette: { ink: S.ink, a: S.lemon, b: S.mint, c: S.paper, d: S.sky },
     tapeAngle: -2,
     rotate: -0.9,
+    seed: 5,
   },
 ]
 
@@ -131,8 +140,18 @@ function AppCard({ app }: { app: App }) {
         borderRight: '1px dashed rgba(0,0,0,0.1)',
       }} />
 
-      <div style={{ fontFamily: mono, fontSize: 22, color: app.accent, marginBottom: 12, lineHeight: 1 }}>
-        {app.icon}
+      {/* polaroid image area with generative sticker mark */}
+      <div style={{
+        width: '100%',
+        aspectRatio: '1/1',
+        background: S.paperD,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
+        overflow: 'hidden',
+      }}>
+        <StickerMark slug={app.slug} seed={app.seed} size={120} palette={app.palette} />
       </div>
 
       <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: S.inkSoft, opacity: 0.55, marginBottom: 4 }}>

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import type { SignupInput } from '@moducore/core'
+import { StickerMark } from '@moducore/ui'
 
 const S = {
   paper: '#efe6d4',
@@ -66,7 +67,9 @@ export function SignupPage() {
         <div style={tape} />
 
         <div style={{ textAlign: 'center', marginBottom: 22 }}>
-          <div style={{ fontSize: 40, marginBottom: 8 }}>⬡</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+            <StickerMark slug="cms" seed={7} size={72} palette={{ ink: S.ink, a: S.coral, b: S.mint, c: '#ffd86b', d: '#9aa8ff' }} />
+          </div>
           <h1 style={{ fontFamily: "'Caveat', 'Patrick Hand', cursive", fontSize: 42, lineHeight: 1, margin: '0 0 4px', color: S.ink }}>
             join the <span style={{ color: S.coral }}>studio.</span>
           </h1>
