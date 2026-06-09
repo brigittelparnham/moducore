@@ -7,6 +7,20 @@ type Props = {
   onUpdateCategory: (id: string, categoryId: string) => void
 }
 
+const S = {
+  paper: '#efe6d4',
+  paperD: '#e2d6bd',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 export function TransactionRow({ transaction, categories, onUpdateCategory }: Props) {
   const [picking, setPicking] = useState(false)
   const amount = parseFloat(transaction.amount)
@@ -16,25 +30,25 @@ export function TransactionRow({ transaction, categories, onUpdateCategory }: Pr
   return (
     <div style={row}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Category icon */}
         <div
-          style={iconBox(cat?.color ?? '#e5e7eb')}
+          style={iconBox}
           onClick={() => setPicking((v) => !v)}
           title="Change category"
         >
           {cat?.icon ?? '📦'}
         </div>
 
-        {/* Description */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: body, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: S.ink }}>
             {transaction.description}
           </div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, display: 'flex', gap: 6 }}>
-            <span>{formatDate(transaction.date)}</span>
+          <div style={{ display: 'flex', gap: 6, marginTop: 2, alignItems: 'center' }}>
+            <span style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', color: S.inkSoft, opacity: 0.6 }}>
+              {formatDate(transaction.date)}
+            </span>
             {cat && (
-              <span style={categoryPill(cat.color ?? '#e5e7eb', transaction.categoryConfirmed)}>
-                {cat.name}
+              <span style={categoryTag(transaction.categoryConfirmed)}>
+                {cat.icon} {cat.name}
                 {!transaction.categoryConfirmed && ' ·'}
               </span>
             )}
@@ -46,13 +60,11 @@ export function TransactionRow({ transaction, categories, onUpdateCategory }: Pr
           </div>
         </div>
 
-        {/* Amount */}
-        <div style={{ fontWeight: 700, fontSize: 15, color: isIn ? '#16a34a' : '#1a1a1a', flexShrink: 0 }}>
+        <div style={{ fontFamily: hand, fontSize: 26, lineHeight: 1, color: isIn ? S.mint : S.ink, flexShrink: 0 }}>
           {isIn ? '+' : '−'}£{Math.abs(amount).toFixed(2)}
         </div>
       </div>
 
-      {/* Category picker */}
       {picking && (
         <div style={picker}>
           {categories.filter((c) => c.type !== 'transfer').map((c) => (
@@ -64,7 +76,7 @@ export function TransactionRow({ transaction, categories, onUpdateCategory }: Pr
               {c.icon} {c.name}
             </button>
           ))}
-          <button style={pickerCancel} onClick={() => setPicking(false)}>Cancel</button>
+          <button style={cancelBtn} onClick={() => setPicking(false)}>cancel</button>
         </div>
       )}
     </div>
@@ -82,37 +94,43 @@ function formatDate(iso: string) {
 
 const row: React.CSSProperties = {
   padding: '10px 0',
-  borderBottom: '1px solid #f3f4f6',
+  borderBottom: `1px dashed rgba(34,26,22,0.12)`,
+  fontFamily: body,
 }
-const iconBox = (color: string): React.CSSProperties => ({
+const iconBox: React.CSSProperties = {
   width: 34,
   height: 34,
-  borderRadius: 8,
-  background: color + '22',
+  borderRadius: 4,
+  background: S.paperD,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   fontSize: 16,
   flexShrink: 0,
   cursor: 'pointer',
-})
-const categoryPill = (color: string, confirmed: boolean): React.CSSProperties => ({
-  background: color + '22',
-  color: color,
-  padding: '1px 6px',
-  borderRadius: 4,
-  fontSize: 11,
-  fontWeight: 500,
-  opacity: confirmed ? 1 : 0.7,
-  border: confirmed ? 'none' : `1px dashed ${color}`,
+}
+const categoryTag = (confirmed: boolean): React.CSSProperties => ({
+  fontFamily: mono,
+  fontSize: 9,
+  letterSpacing: '0.12em',
+  background: S.paperD,
+  color: S.inkSoft,
+  padding: '2px 6px',
+  borderRadius: 999,
+  textTransform: 'uppercase' as const,
+  opacity: confirmed ? 1 : 0.65,
+  border: confirmed ? 'none' : `1px dashed ${S.inkSoft}`,
 })
 const uncategorisedBtn: React.CSSProperties = {
   background: 'none',
-  border: 'none',
-  color: '#6366f1',
-  fontSize: 11,
+  border: `1px dashed ${S.inkSoft}`,
+  color: S.inkSoft,
+  fontFamily: mono,
+  fontSize: 9,
+  letterSpacing: '0.12em',
   cursor: 'pointer',
-  padding: 0,
+  padding: '2px 7px',
+  borderRadius: 999,
 }
 const picker: React.CSSProperties = {
   marginTop: 8,
@@ -120,24 +138,26 @@ const picker: React.CSSProperties = {
   flexWrap: 'wrap',
   gap: 6,
   padding: '8px 0 4px',
-  borderTop: '1px solid #f3f4f6',
+  borderTop: `1px dashed rgba(34,26,22,0.12)`,
 }
 const pickerItem = (active: boolean): React.CSSProperties => ({
   padding: '4px 10px',
-  background: active ? '#6366f1' : '#f3f4f6',
-  color: active ? '#fff' : '#444',
+  background: active ? S.ink : S.paperD,
+  color: active ? S.paper : S.inkSoft,
   border: 'none',
-  borderRadius: 20,
+  borderRadius: 999,
   cursor: 'pointer',
+  fontFamily: body,
   fontSize: 12,
-  fontWeight: active ? 700 : 400,
+  fontWeight: active ? 600 : 400,
 })
-const pickerCancel: React.CSSProperties = {
+const cancelBtn: React.CSSProperties = {
   padding: '4px 10px',
-  background: 'none',
-  border: '1px solid #d1d5db',
-  borderRadius: 20,
+  background: 'transparent',
+  border: `1.5px solid ${S.ink}`,
+  borderRadius: 999,
   cursor: 'pointer',
+  fontFamily: body,
   fontSize: 12,
-  color: '#888',
+  color: S.inkSoft,
 }

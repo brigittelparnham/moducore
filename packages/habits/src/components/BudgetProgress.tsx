@@ -5,37 +5,59 @@ type Props = {
   period: 'weekly' | 'monthly' | 'yearly'
 }
 
+const S = {
+  paper: '#efe6d4',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 export function BudgetProgress({ lines, period }: Props) {
   if (lines.length === 0) {
-    return <p style={muted}>No budget rules set for {period}.</p>
+    return (
+      <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>
+        no budget rules for {period} yet.
+      </p>
+    )
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {lines.map((line) => {
         const limit = parseFloat(line.limitAmount)
         const pct = limit > 0 ? Math.min(line.spent / limit, 1) : 0
         const over = line.spent > limit
-        const color = over ? '#ef4444' : pct > 0.8 ? '#f59e0b' : '#16a34a'
+        const barColor = over ? S.coral : pct > 0.8 ? S.lemon : S.mint
 
         return (
-          <div key={line.id}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-              <span style={{ fontSize: 13, fontWeight: 600 }}>
+          <div key={line.id} style={{ fontFamily: body }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+              <span style={{ fontFamily: hand, fontSize: 22, color: S.ink }}>
                 {line.category?.icon} {line.category?.name ?? 'Unknown'}
               </span>
-              <span style={{ fontSize: 13, color: over ? '#ef4444' : '#444', fontWeight: over ? 700 : 400 }}>
-                £{line.spent.toFixed(2)}
-                <span style={{ color: '#94a3b8' }}> / £{limit.toFixed(2)}</span>
+              <span style={{ fontFamily: mono, fontSize: 11, letterSpacing: '0.1em', color: over ? S.coral : S.inkSoft }}>
+                £{line.spent.toFixed(2)} / £{limit.toFixed(2)}
               </span>
             </div>
-            <div style={bar}>
-              <div style={{ ...fill, width: `${pct * 100}%`, background: color }} />
+            <div style={{ height: 12, background: 'rgba(34,26,22,0.08)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${pct * 100}%`,
+                background: barColor,
+                borderRadius: 999,
+                transition: 'width 0.3s',
+              }} />
             </div>
-            <div style={{ fontSize: 11, color: over ? '#ef4444' : '#94a3b8', marginTop: 2 }}>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', color: over ? S.coral : S.inkSoft, marginTop: 3, opacity: over ? 1 : 0.6 }}>
               {over
-                ? `£${(line.spent - limit).toFixed(2)} over budget`
-                : `£${Math.max(0, line.remaining).toFixed(2)} remaining`}
+                ? `£${(line.spent - limit).toFixed(2)} OVER`
+                : `£${Math.max(0, line.remaining).toFixed(2)} REMAINING`}
             </div>
           </div>
         )
@@ -43,16 +65,3 @@ export function BudgetProgress({ lines, period }: Props) {
     </div>
   )
 }
-
-const bar: React.CSSProperties = {
-  height: 8,
-  background: '#f3f4f6',
-  borderRadius: 4,
-  overflow: 'hidden',
-}
-const fill: React.CSSProperties = {
-  height: '100%',
-  borderRadius: 4,
-  transition: 'width 0.3s',
-}
-const muted: React.CSSProperties = { color: '#94a3b8', fontSize: 14, margin: 0 }

@@ -18,6 +18,20 @@ function primaryTarget(targets: HabitTarget[]): HabitTarget | null {
   return null
 }
 
+const S = {
+  paper: '#efe6d4',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+  rose: '#ff9bb8',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 export function HabitCard({ habit, todayTotal = 0, streak = 0, onLog }: Props) {
   const [logging, setLogging] = useState(false)
   const [inputVal, setInputVal] = useState('1')
@@ -29,7 +43,7 @@ export function HabitCard({ habit, todayTotal = 0, streak = 0, onLog }: Props) {
   const isOver = isLimit && targetNum !== null && todayTotal > targetNum
   const isMet = targetNum !== null && (isLimit ? todayTotal <= targetNum : todayTotal >= targetNum)
 
-  const progressColor = isOver ? '#ef4444' : isMet ? '#16a34a' : (habit.color ?? '#6366f1')
+  const barColor = isOver ? S.coral : isMet ? S.mint : S.lemon
 
   function handleLog(e: React.FormEvent) {
     e.preventDefault()
@@ -40,47 +54,42 @@ export function HabitCard({ habit, todayTotal = 0, streak = 0, onLog }: Props) {
 
   return (
     <div style={card}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        {/* Icon */}
-        <div style={{ fontSize: 24, width: 36, textAlign: 'center', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ fontSize: 22, width: 32, textAlign: 'center', flexShrink: 0, paddingTop: 2 }}>
           {habit.icon ?? (isLimit ? '🚧' : '✅')}
         </div>
-        {/* Main */}
+
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>{habit.name}</span>
-            {isLimit && <span style={limitBadge}>limit</span>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: hand, fontSize: 26, lineHeight: 1.1, color: S.ink }}>{habit.name}</span>
+            {isLimit && (
+              <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase' as const, background: S.rose, color: S.ink, padding: '2px 7px', borderRadius: 999 }}>limit</span>
+            )}
             {streak > 0 && (
-              <span style={streakBadge}>🔥 {streak}</span>
+              <span style={{ fontFamily: hand, fontSize: 18, color: S.coral }}>↑ {streak}</span>
             )}
           </div>
 
           {targetNum !== null && target?.frequency === 'daily' && (
             <>
-              <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-                {isLimit
-                  ? `${todayTotal} / ${targetNum} ${habit.unit} today`
-                  : `${todayTotal} / ${targetNum} ${habit.unit} today`}
+              <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.15em', color: S.inkSoft, marginTop: 3, opacity: 0.7 }}>
+                {todayTotal} / {targetNum} {habit.unit}
               </div>
-              <div style={progressBar}>
-                <div
-                  style={{
-                    ...progressFill,
-                    width: `${Math.min(progress * 100, 100)}%`,
-                    background: progressColor,
-                  }}
-                />
+              <div style={{ marginTop: 6, height: 10, background: 'rgba(0,0,0,0.08)', borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(progress * 100, 100)}%`,
+                  background: barColor,
+                  borderRadius: 999,
+                  transition: 'width 0.3s ease',
+                }} />
               </div>
             </>
           )}
         </div>
-        {/* Log button */}
-        <button
-          style={logBtn(habit.color ?? '#6366f1')}
-          onClick={() => setLogging((v) => !v)}
-          title="Log"
-        >
-          +
+
+        <button style={logBtn} onClick={() => setLogging((v) => !v)} title="Log">
+          {logging ? '✕' : '+'}
         </button>
       </div>
 
@@ -95,9 +104,9 @@ export function HabitCard({ habit, todayTotal = 0, streak = 0, onLog }: Props) {
             style={logInput}
             autoFocus
           />
-          <span style={{ fontSize: 13, color: '#666' }}>{habit.unit}</span>
-          <button type="submit" style={logSubmit(habit.color ?? '#6366f1')}>Log</button>
-          <button type="button" onClick={() => setLogging(false)} style={cancelBtn}>Cancel</button>
+          <span style={{ fontFamily: mono, fontSize: 11, color: S.inkSoft, letterSpacing: '0.1em' }}>{habit.unit}</span>
+          <button type="submit" style={logSubmitBtn}>log it →</button>
+          <button type="button" onClick={() => setLogging(false)} style={cancelBtn}>cancel</button>
         </form>
       )}
     </div>
@@ -106,46 +115,19 @@ export function HabitCard({ habit, todayTotal = 0, streak = 0, onLog }: Props) {
 
 const card: React.CSSProperties = {
   background: '#fff',
-  border: '1px solid #e5e7eb',
-  borderRadius: 10,
-  padding: '12px 14px',
-}
-const limitBadge: React.CSSProperties = {
-  fontSize: 10,
-  fontWeight: 600,
-  background: '#fef3c7',
-  color: '#92400e',
-  padding: '2px 6px',
+  boxShadow: '0 6px 14px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.06)',
   borderRadius: 4,
-  textTransform: 'uppercase',
+  padding: '14px 16px',
+  fontFamily: body,
 }
-const streakBadge: React.CSSProperties = {
-  fontSize: 12,
-  background: '#fff7ed',
-  color: '#c2410c',
-  padding: '2px 6px',
-  borderRadius: 4,
-}
-const progressBar: React.CSSProperties = {
-  marginTop: 6,
-  height: 5,
-  background: '#f3f4f6',
-  borderRadius: 3,
-  overflow: 'hidden',
-}
-const progressFill: React.CSSProperties = {
-  height: '100%',
-  borderRadius: 3,
-  transition: 'width 0.3s ease',
-}
-const logBtn = (color: string): React.CSSProperties => ({
-  width: 28,
-  height: 28,
+const logBtn: React.CSSProperties = {
+  width: 30,
+  height: 30,
   borderRadius: '50%',
-  background: color,
-  color: '#fff',
+  background: S.ink,
+  color: S.paper,
   border: 'none',
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 700,
   cursor: 'pointer',
   display: 'flex',
@@ -153,38 +135,44 @@ const logBtn = (color: string): React.CSSProperties => ({
   justifyContent: 'center',
   flexShrink: 0,
   lineHeight: 1,
-})
+  fontFamily: body,
+}
 const logForm: React.CSSProperties = {
   marginTop: 10,
   display: 'flex',
   alignItems: 'center',
   gap: 8,
-  borderTop: '1px solid #f3f4f6',
+  borderTop: `1px dashed rgba(34,26,22,0.15)`,
   paddingTop: 10,
 }
 const logInput: React.CSSProperties = {
   width: 80,
-  padding: '4px 8px',
-  border: '1px solid #d1d5db',
+  padding: '5px 9px',
+  border: `1.5px solid ${S.ink}`,
   borderRadius: 6,
   fontSize: 14,
+  fontFamily: body,
+  background: S.paper,
+  color: S.ink,
 }
-const logSubmit = (color: string): React.CSSProperties => ({
-  padding: '4px 12px',
-  background: color,
-  color: '#fff',
+const logSubmitBtn: React.CSSProperties = {
+  padding: '5px 14px',
+  background: S.ink,
+  color: S.paper,
   border: 'none',
-  borderRadius: 6,
+  borderRadius: 999,
   cursor: 'pointer',
   fontSize: 13,
   fontWeight: 600,
-})
+  fontFamily: body,
+}
 const cancelBtn: React.CSSProperties = {
-  padding: '4px 10px',
-  background: 'none',
-  border: '1px solid #d1d5db',
-  borderRadius: 6,
+  padding: '5px 10px',
+  background: 'transparent',
+  border: `1.5px solid ${S.ink}`,
+  borderRadius: 999,
   cursor: 'pointer',
   fontSize: 13,
-  color: '#666',
+  color: S.inkSoft,
+  fontFamily: body,
 }

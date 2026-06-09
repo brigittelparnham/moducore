@@ -4,7 +4,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
   getAccounts, getAccount, createAccount, updateAccount, getAccountBalance,
-  getCategories, createCategory, updateCategory, seedDefaultCategories,
+  getCategories, createCategory, updateCategory, deleteCategory, seedDefaultCategories,
   suggestCategory, learnMerchantCategory,
   getTransactions, createTransaction, updateTransaction, bulkUpsertTransactions,
   getBudgetRules, upsertBudgetRule, deleteBudgetRule, getCategorySpend,
@@ -257,6 +257,13 @@ financeRoutes.patch(
     return c.json({ category })
   }
 )
+
+financeRoutes.delete('/categories/:id', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  await deleteCategory(db, tenant.id, c.req.param('id'))
+  return c.json({ ok: true })
+})
 
 // ─── Budget rules ─────────────────────────────────────────────────────────────
 

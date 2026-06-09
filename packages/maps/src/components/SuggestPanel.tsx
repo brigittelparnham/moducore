@@ -3,6 +3,19 @@ import { useMaps } from '../context'
 import { createMapsApi } from '../api'
 import type { SuggestionOption, TflLeg } from '../types'
 
+const S = {
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+  paper: '#efe6d4',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 type Props = {
   fromLat: number
   fromLon: number
@@ -40,7 +53,9 @@ export function SuggestPanel({ fromLat, fromLon, places }: Props) {
 
   return (
     <div>
-      <h3 style={sectionTitle}>Journey Suggestions</h3>
+      <div style={{ fontFamily: hand, fontSize: 28, color: S.ink, marginBottom: 14 }}>
+        journey suggestions ↘
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <select
@@ -48,7 +63,7 @@ export function SuggestPanel({ fromLat, fromLon, places }: Props) {
           onChange={(e) => setToPlace(e.target.value)}
           style={selectStyle}
         >
-          <option value="">Select destination…</option>
+          <option value="">select destination…</option>
           {places.map((p) => (
             <option key={p.id} value={p.name}>{p.name}</option>
           ))}
@@ -56,54 +71,57 @@ export function SuggestPanel({ fromLat, fromLon, places }: Props) {
         <button
           onClick={handleSuggest}
           disabled={!toPlace || isLoading}
-          style={btnStyle}
+          style={btnStyle(!toPlace || isLoading)}
         >
-          {isLoading ? 'Checking…' : 'Get suggestions'}
+          {isLoading ? 'checking…' : 'go →'}
         </button>
       </div>
 
-      {error && <p style={{ color: '#e53e3e', fontSize: 13 }}>{error}</p>}
+      {error && (
+        <p style={{ fontFamily: body, fontSize: 13, color: S.coral, margin: '0 0 10px' }}>{error}</p>
+      )}
 
       {suggestions.length === 0 && !isLoading && !error && toPlace && (
-        <p style={mutedText}>No suggestions found — check that your destination is a known place.</p>
+        <p style={{ fontFamily: hand, fontSize: 18, color: S.inkSoft, opacity: 0.6, margin: 0 }}>
+          no suggestions — check your destination is a known place.
+        </p>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {suggestions.map((s, i) => (
-          <div key={i} style={cardStyle}>
+          <div key={i} style={suggCard}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <span style={durationBadge}>{formatMin(s.durationEstimateS)}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontFamily: hand, fontSize: 28, color: S.ink, lineHeight: 1 }}>
+                  {formatMin(s.durationEstimateS)}
+                </span>
                 <span style={confidencePill(s.confidence)}>{confidenceLabel(s.confidence)}</span>
               </div>
-              <button
-                style={expandBtn}
-                onClick={() => setExpanded(expanded === i ? null : i)}
-              >
+              <button style={expandBtn} onClick={() => setExpanded(expanded === i ? null : i)}>
                 {expanded === i ? '▲' : '▼'}
               </button>
             </div>
 
             {s.personalNote && (
-              <p style={noteStyle}>📊 {s.personalNote}</p>
+              <p style={note}>📊 {s.personalNote}</p>
             )}
             {s.weatherNote && (
-              <p style={noteStyle}>🌦 {s.weatherNote}</p>
+              <p style={note}>🌦 {s.weatherNote}</p>
             )}
             {s.disruptions.length > 0 && (
-              <p style={{ ...noteStyle, color: '#c05621' }}>⚠️ {s.disruptions.join('; ')}</p>
+              <p style={{ ...note, color: S.coral }}>⚠️ {s.disruptions.join('; ')}</p>
             )}
 
             {expanded === i && s.legs.length > 0 && (
-              <div style={{ marginTop: 10, borderTop: '1px solid #f0f0f0', paddingTop: 10 }}>
+              <div style={{ marginTop: 10, borderTop: `1px solid rgba(34,26,22,0.08)`, paddingTop: 10 }}>
                 {s.legs.map((leg, li) => (
                   <LegRow key={li} leg={leg} />
                 ))}
               </div>
             )}
 
-            <div style={{ marginTop: 6, fontSize: 11, color: '#aaa' }}>
-              TfL estimate: {formatMin(s.tflDurationS)}
+            <div style={{ marginTop: 6, fontFamily: mono, fontSize: 9, letterSpacing: '0.1em', color: S.inkSoft, opacity: 0.5 }}>
+              TFL ESTIMATE: {formatMin(s.tflDurationS)}
             </div>
           </div>
         ))}
@@ -115,14 +133,14 @@ export function SuggestPanel({ fromLat, fromLon, places }: Props) {
 function LegRow({ leg }: { leg: TflLeg }) {
   const icon = modeIcon(leg.mode)
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6, fontSize: 13 }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
       <span style={{ fontSize: 16 }}>{icon}</span>
       <div>
-        <div style={{ fontWeight: 600 }}>
+        <div style={{ fontFamily: body, fontWeight: 600, fontSize: 13, color: '#221a16' }}>
           {leg.lineName ? `${leg.lineName} — ` : ''}{leg.instruction}
         </div>
         {leg.departureStop && (
-          <div style={{ color: '#888' }}>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.08em', color: '#3b302a', opacity: 0.6 }}>
             {leg.departureStop} → {leg.arrivalStop} · {leg.durationMinutes} min
           </div>
         )}
@@ -146,72 +164,68 @@ function modeIcon(mode: string) {
 }
 
 function confidenceLabel(c: SuggestionOption['confidence']) {
-  if (c === 'strong') return 'Personalised'
-  if (c === 'early') return 'Limited data'
-  return 'TfL only'
+  if (c === 'strong') return 'personalised'
+  if (c === 'early') return 'limited data'
+  return 'tfl only'
 }
 
 function confidencePill(c: SuggestionOption['confidence']): React.CSSProperties {
   const base: React.CSSProperties = {
-    display: 'inline-block',
-    fontSize: 10,
+    fontFamily: mono,
+    fontSize: 9,
     fontWeight: 600,
-    borderRadius: 10,
-    padding: '2px 7px',
-    marginLeft: 6,
+    borderRadius: 999,
+    padding: '2px 8px',
+    letterSpacing: '0.15em',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   }
-  if (c === 'strong') return { ...base, background: '#d1fae5', color: '#065f46' }
-  if (c === 'early') return { ...base, background: '#fef3c7', color: '#92400e' }
-  return { ...base, background: '#e5e7eb', color: '#374151' }
+  if (c === 'strong') return { ...base, background: '#7fd1b9', color: '#221a16' }
+  if (c === 'early') return { ...base, background: '#ffd86b', color: '#221a16' }
+  return { ...base, background: 'rgba(34,26,22,0.1)', color: '#3b302a' }
 }
 
-const sectionTitle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 700,
-  marginBottom: 12,
-  marginTop: 0,
-}
 const selectStyle: React.CSSProperties = {
   flex: 1,
-  padding: '8px 10px',
-  border: '1px solid #e5e7eb',
-  borderRadius: 6,
-  fontSize: 13,
-  background: '#fff',
+  padding: '9px 12px',
+  border: `1.5px solid rgba(34,26,22,0.2)`,
+  borderRadius: 3,
+  fontSize: 14,
+  fontFamily: "'Space Grotesk', sans-serif",
+  background: '#fffdf8',
+  color: '#221a16',
+  outline: 'none',
 }
-const btnStyle: React.CSSProperties = {
-  padding: '8px 16px',
-  background: '#1a1a1a',
-  color: '#fff',
+const btnStyle = (disabled: boolean): React.CSSProperties => ({
+  padding: '9px 20px',
+  background: disabled ? 'rgba(34,26,22,0.3)' : '#221a16',
+  color: '#efe6d4',
   border: 'none',
-  borderRadius: 6,
-  fontSize: 13,
-  cursor: 'pointer',
+  borderRadius: 999,
+  fontFamily: "'Space Grotesk', sans-serif",
+  fontSize: 14,
+  fontWeight: 600,
+  cursor: disabled ? 'not-allowed' : 'pointer',
   whiteSpace: 'nowrap',
-}
-const cardStyle: React.CSSProperties = {
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
+})
+const suggCard: React.CSSProperties = {
+  border: `1.5px solid rgba(34,26,22,0.1)`,
+  borderRadius: 3,
   padding: '12px 14px',
-  background: '#fff',
-}
-const durationBadge: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 700,
+  background: '#fffdf8',
+  boxShadow: '1px 2px 0 rgba(34,26,22,0.05)',
 }
 const expandBtn: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
-  color: '#aaa',
+  color: '#3b302a',
+  opacity: 0.4,
   fontSize: 12,
   padding: 0,
 }
-const noteStyle: React.CSSProperties = {
+const note: React.CSSProperties = {
   margin: '6px 0 0',
+  fontFamily: "'Space Grotesk', sans-serif",
   fontSize: 12,
-  color: '#555',
+  color: '#3b302a',
 }
-const mutedText: React.CSSProperties = { color: '#888', fontSize: 13 }

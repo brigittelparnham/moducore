@@ -3,6 +3,16 @@ import { useSpotify } from '../context'
 import { createSpotifyApi } from '../api'
 import type { SpotifyTrack, SpotifyRecentlyPlayedItem } from '../types'
 
+const S = {
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 function albumArt(track: SpotifyTrack): string {
   return track.album.images[0]?.url ?? ''
 }
@@ -33,14 +43,13 @@ export function NowPlaying() {
         setIsPlaying(playing.is_playing)
         setIsLive(true)
       } else {
-        // Fall back to most recently played
         const { data } = await api.getRecentlyPlayed()
         const recent = (data as SpotifyRecentlyPlayedItem[])[0]
         if (recent) setTrack(recent.track)
         setIsLive(false)
       }
     } catch {
-      // silent — not critical
+      // silent
     } finally {
       setIsLoading(false)
     }
@@ -48,14 +57,21 @@ export function NowPlaying() {
 
   useEffect(() => {
     load()
-    // Poll every 30s
     const id = setInterval(load, 30_000)
     return () => clearInterval(id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase])
 
-  if (isLoading) return <div style={card}><p style={muted}>Loading…</p></div>
-  if (!track) return <div style={card}><p style={muted}>Nothing played recently.</p></div>
+  if (isLoading) return (
+    <div style={card}>
+      <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.5, margin: 0 }}>loading…</p>
+    </div>
+  )
+  if (!track) return (
+    <div style={card}>
+      <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.6, margin: 0 }}>nothing played recently.</p>
+    </div>
+  )
 
   return (
     <div style={card}>
@@ -64,31 +80,31 @@ export function NowPlaying() {
           <img
             src={albumArt(track)}
             alt={track.album.name}
-            style={{ width: 80, height: 80, borderRadius: 6, flexShrink: 0, objectFit: 'cover' }}
+            style={{ width: 80, height: 80, borderRadius: 2, flexShrink: 0, objectFit: 'cover', boxShadow: '2px 3px 0 rgba(34,26,22,0.12)' }}
           />
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             {isLive && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                letterSpacing: 1, color: '#1DB954', display: 'flex', alignItems: 'center', gap: 4,
-              }}>
+              <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: S.mint, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{
-                  width: 6, height: 6, borderRadius: '50%', background: '#1DB954',
+                  width: 6, height: 6, borderRadius: '50%', background: S.mint,
                   display: 'inline-block',
-                  animation: isPlaying ? 'pulse 1.5s infinite' : undefined,
                 }} />
-                {isPlaying ? 'Now Playing' : 'Paused'}
+                {isPlaying ? 'now playing' : 'paused'}
               </span>
             )}
-            {!isLive && <span style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: 1 }}>Last Played</span>}
+            {!isLive && (
+              <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: S.inkSoft, opacity: 0.5 }}>last played</span>
+            )}
           </div>
-          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: hand, fontSize: 28, color: S.ink, lineHeight: 1.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {track.name}
           </div>
-          <div style={{ fontSize: 14, color: '#555', marginBottom: 4 }}>{artistNames(track)}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{track.album.name} · {formatMs(track.duration_ms)}</div>
+          <div style={{ fontFamily: body, fontSize: 14, color: S.inkSoft, marginTop: 2 }}>{artistNames(track)}</div>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.1em', color: S.inkSoft, opacity: 0.55, marginTop: 2 }}>
+            {track.album.name} · {formatMs(track.duration_ms)}
+          </div>
         </div>
       </div>
     </div>
@@ -96,10 +112,9 @@ export function NowPlaying() {
 }
 
 const card: React.CSSProperties = {
-  background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: 10,
+  background: '#fffdf8',
+  border: `1.5px solid rgba(34,26,22,0.1)`,
+  borderRadius: 3,
   padding: 20,
+  boxShadow: '2px 3px 0 rgba(34,26,22,0.06)',
 }
-
-const muted: React.CSSProperties = { color: '#888', fontSize: 14, margin: 0 }

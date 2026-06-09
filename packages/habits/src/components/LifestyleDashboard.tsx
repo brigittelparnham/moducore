@@ -8,8 +8,27 @@ import { TransactionRow } from './TransactionRow'
 import { TransactionForm } from './TransactionForm'
 import { AccountCard } from './AccountCard'
 import { BudgetProgress } from './BudgetProgress'
+import { LifestyleSettings } from './LifestyleSettings'
 
-type Tab = 'today' | 'finance' | 'budget' | 'rewards'
+type Tab = 'today' | 'finance' | 'budget' | 'rewards' | 'settings'
+
+// ── Studio design tokens ──────────────────────────────────────────────────────
+const S = {
+  paper: '#efe6d4',
+  paperD: '#e2d6bd',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+  rose: '#ff9bb8',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
+const TABS: Tab[] = ['today', 'finance', 'budget', 'rewards', 'settings']
 
 export function LifestyleDashboard() {
   const { apiBase } = useHabits()
@@ -47,8 +66,6 @@ export function LifestyleDashboard() {
         setTransactions(t.transactions)
         setCategories(c.categories)
         setBudgetLines(b.budget)
-
-        // Fetch balances
         return Promise.all(a.accounts.map((acc) => api.accounts.get(acc.id)))
       })
       .then((details) => {
@@ -101,35 +118,71 @@ export function LifestyleDashboard() {
     streaks.filter((s) => s.frequency === 'daily').map((s) => [s.habitId, s.current])
   )
 
-  if (loading) return <div style={page}><p style={muted}>Loading…</p></div>
+  const today = new Date()
+  const dateLabel = today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
+  if (loading) {
+    return (
+      <div style={page}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+          <span style={{ fontFamily: hand, fontSize: 32, color: S.inkSoft, opacity: 0.5 }}>loading…</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={page}>
-      {/* Header */}
-      <div style={headerBox}>
-        <h1 style={title}>Lifestyle</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={pointsBadge}>⭐ {points}</span>
+      {/* dot grid overlay */}
+      <div style={dotGrid} />
+
+      {/* Header bar */}
+      <div style={header}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', paddingTop: 16 }}>
+          <div>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.25em', opacity: 0.55, textTransform: 'uppercase' as const }}>
+              lifestyle
+            </div>
+            <h1 style={{ fontFamily: body, fontWeight: 700, fontSize: 32, letterSpacing: '-0.03em', margin: '2px 0 0', color: S.ink, lineHeight: 1 }}>
+              small <span style={{ fontFamily: hand, color: S.coral, fontSize: 40 }}>reps,</span>{' '}
+              big <span style={{ fontFamily: hand, color: S.mint, fontSize: 40 }}>self.</span>
+            </h1>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, lineHeight: 1.15 }}>{dateLabel}</div>
+            {points > 0 && (
+              <div style={pointsBadge}>⭐ {points} pts</div>
+            )}
+          </div>
         </div>
+
+        {/* Tab bar */}
         <nav style={tabBar}>
-          {(['today', 'finance', 'budget', 'rewards'] as Tab[]).map((t) => (
+          {TABS.map((t) => (
             <button key={t} style={tabBtn(tab === t)} onClick={() => setTab(t)}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t}
             </button>
           ))}
         </nav>
       </div>
 
       <div style={content}>
+
         {/* TODAY TAB */}
         {tab === 'today' && (
-          <div>
-            <section style={section}>
-              <h3 style={sectionTitle}>Today's habits</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Habits grid card */}
+            <div style={paperCard(-0.5)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+                <div style={{ fontFamily: hand, fontSize: 28, color: S.ink }}>today's reps ↘</div>
+                <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.2em', opacity: 0.55 }}>TAP + TO LOG</div>
+              </div>
               {todayHabits.length === 0 ? (
-                <p style={muted}>No daily habits yet. Add some in the Habits page.</p>
+                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>
+                  no daily habits yet. add some in settings →
+                </p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {todayHabits.map((h) => (
                     <HabitCard
                       key={h.id}
@@ -140,12 +193,57 @@ export function LifestyleDashboard() {
                   ))}
                 </div>
               )}
-            </section>
+            </div>
 
-            <section style={section}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ ...sectionTitle, margin: 0 }}>Recent spending</h3>
-                <button style={addBtn} onClick={() => setShowAddTx(true)}>+ Add</button>
+            {/* Streak + recent spend side-by-side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {/* Streak sticky */}
+              <div style={stickyNote(S.lemon, 1)}>
+                <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.2em', opacity: 0.65, textTransform: 'uppercase' as const }}>streak</div>
+                {streaks.length > 0 ? (
+                  <>
+                    <div style={{ fontFamily: hand, fontSize: 52, lineHeight: 1, marginTop: 4, color: S.ink }}>
+                      {Math.max(...streaks.map((s) => s.current), 0)}
+                    </div>
+                    <div style={{ fontFamily: hand, fontSize: 22, color: S.coral, marginTop: 2 }}>days ↑</div>
+                  </>
+                ) : (
+                  <div style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, marginTop: 6, opacity: 0.6 }}>
+                    start logging to build a streak
+                  </div>
+                )}
+              </div>
+
+              {/* Spending sticky */}
+              <div style={stickyNote(S.rose, -1.5)}>
+                <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.2em', opacity: 0.65, textTransform: 'uppercase' as const }}>this week</div>
+                {transactions.length > 0 ? (
+                  <>
+                    <div style={{ fontFamily: hand, fontSize: 36, lineHeight: 1.1, marginTop: 4, color: S.ink }}>
+                      £{transactions
+                        .filter((tx) => {
+                          const d = new Date(tx.date)
+                          const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+                          return d >= weekAgo && parseFloat(tx.amount) < 0
+                        })
+                        .reduce((sum, tx) => sum + Math.abs(parseFloat(tx.amount)), 0)
+                        .toFixed(0)}
+                    </div>
+                    <div style={{ fontFamily: hand, fontSize: 18, color: S.inkSoft, marginTop: 2 }}>spent this week</div>
+                  </>
+                ) : (
+                  <div style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, marginTop: 6, opacity: 0.6 }}>
+                    no transactions yet
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Recent transactions */}
+            <div style={paperCard(0.4)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+                <div style={{ fontFamily: hand, fontSize: 28, color: S.ink }}>recent spending ↘</div>
+                <button style={addBtn} onClick={() => setShowAddTx(true)}>+ add</button>
               </div>
               {showAddTx && (
                 <TransactionForm
@@ -164,29 +262,29 @@ export function LifestyleDashboard() {
                 />
               ))}
               {transactions.length === 0 && !showAddTx && (
-                <p style={muted}>No transactions yet.</p>
+                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no transactions yet.</p>
               )}
-            </section>
+            </div>
           </div>
         )}
 
         {/* FINANCE TAB */}
         {tab === 'finance' && (
-          <div>
-            <section style={section}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ ...sectionTitle, margin: 0 }}>Accounts</h3>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={paperCard(-0.4)}>
+              <div style={{ fontFamily: hand, fontSize: 28, color: S.ink, marginBottom: 14 }}>accounts ↘</div>
               {accounts.map((a) => (
                 <AccountCard key={a.id} account={a} balance={balances[a.id] ?? 0} />
               ))}
-              {accounts.length === 0 && <p style={muted}>No accounts yet.</p>}
-            </section>
+              {accounts.length === 0 && (
+                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no accounts yet.</p>
+              )}
+            </div>
 
-            <section style={section}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h3 style={{ ...sectionTitle, margin: 0 }}>Transactions</h3>
-                <button style={addBtn} onClick={() => setShowAddTx(true)}>+ Add</button>
+            <div style={paperCard(0.3)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+                <div style={{ fontFamily: hand, fontSize: 28, color: S.ink }}>transactions ↘</div>
+                <button style={addBtn} onClick={() => setShowAddTx(true)}>+ add</button>
               </div>
               {showAddTx && (
                 <TransactionForm
@@ -205,32 +303,28 @@ export function LifestyleDashboard() {
                 />
               ))}
               {transactions.length === 0 && !showAddTx && (
-                <p style={muted}>No transactions yet.</p>
+                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no transactions yet.</p>
               )}
-            </section>
+            </div>
           </div>
         )}
 
         {/* BUDGET TAB */}
         {tab === 'budget' && (
-          <section style={section}>
-            <h3 style={sectionTitle}>Monthly budget</h3>
+          <div style={paperCard(-0.5)}>
+            <div style={{ fontFamily: hand, fontSize: 28, color: S.ink, marginBottom: 16 }}>monthly budget ↘</div>
             <BudgetProgress lines={budgetLines} period="monthly" />
-          </section>
+          </div>
         )}
 
         {/* REWARDS TAB */}
         {tab === 'rewards' && (
-          <div>
-            <section style={section}>
-              <PointsWidget
-                total={points}
-              />
-            </section>
-            <section style={section}>
-              <h3 style={sectionTitle}>Rewards</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <PointsWidget total={points} />
+            <div style={paperCard(0.4)}>
+              <div style={{ fontFamily: hand, fontSize: 28, color: S.ink, marginBottom: 14 }}>rewards ↘</div>
               {rewards.length === 0 ? (
-                <p style={muted}>No rewards set up yet.</p>
+                <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no rewards set up yet.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {rewards.map((r) => (
@@ -238,79 +332,98 @@ export function LifestyleDashboard() {
                   ))}
                 </div>
               )}
-            </section>
+            </div>
           </div>
         )}
+
+        {/* SETTINGS TAB */}
+        {tab === 'settings' && <LifestyleSettings />}
       </div>
     </div>
   )
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
 const page: React.CSSProperties = {
   minHeight: '100vh',
-  background: '#f9fafb',
-  fontFamily: 'system-ui, -apple-system, sans-serif',
+  background: S.paper,
+  fontFamily: body,
+  position: 'relative',
 }
-const headerBox: React.CSSProperties = {
-  background: '#fff',
-  borderBottom: '1px solid #e5e7eb',
-  padding: '0 24px',
+const dotGrid: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  pointerEvents: 'none',
+  backgroundImage: `radial-gradient(${S.inkSoft}22 1px, transparent 1px)`,
+  backgroundSize: '18px 18px',
+  opacity: 0.35,
+  zIndex: 0,
 }
-const title: React.CSSProperties = {
-  fontSize: 22,
-  fontWeight: 700,
-  margin: '20px 0 8px',
-}
-const pointsBadge: React.CSSProperties = {
-  fontSize: 13,
-  fontWeight: 700,
-  background: '#fef9c3',
-  color: '#92400e',
-  padding: '4px 10px',
-  borderRadius: 20,
+const header: React.CSSProperties = {
+  background: S.paper,
+  borderBottom: `1px solid rgba(34,26,22,0.12)`,
+  position: 'sticky',
+  top: 0,
+  zIndex: 10,
+  paddingBottom: 0,
 }
 const tabBar: React.CSSProperties = {
   display: 'flex',
-  gap: 2,
-  marginTop: 8,
+  gap: 0,
+  padding: '0 16px',
+  marginTop: 12,
 }
 const tabBtn = (active: boolean): React.CSSProperties => ({
-  padding: '10px 16px',
+  padding: '8px 16px',
   background: 'none',
   border: 'none',
-  borderBottom: active ? '2px solid #1a1a1a' : '2px solid transparent',
+  borderBottom: active ? `2.5px solid ${S.ink}` : '2.5px solid transparent',
+  fontFamily: mono,
   fontWeight: active ? 700 : 400,
-  fontSize: 14,
+  fontSize: 11,
+  letterSpacing: '0.2em',
+  textTransform: 'uppercase' as const,
   cursor: 'pointer',
-  color: active ? '#1a1a1a' : '#888',
+  color: active ? S.ink : S.inkSoft,
+  opacity: active ? 1 : 0.55,
   marginBottom: -1,
 })
 const content: React.CSSProperties = {
-  maxWidth: 700,
+  maxWidth: 720,
   margin: '0 auto',
   padding: '24px 16px',
+  position: 'relative',
+  zIndex: 1,
 }
-const section: React.CSSProperties = {
+const paperCard = (rot: number): React.CSSProperties => ({
   background: '#fff',
-  borderRadius: 10,
-  padding: '16px 18px',
-  marginBottom: 16,
-  border: '1px solid #e5e7eb',
+  boxShadow: '0 14px 30px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.07)',
+  borderRadius: 4,
+  padding: '18px 22px',
+  transform: `rotate(${rot}deg)`,
+})
+const stickyNote = (bg: string, rot: number): React.CSSProperties => ({
+  background: bg,
+  boxShadow: '0 8px 18px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)',
+  borderRadius: 4,
+  padding: '14px 16px',
+  transform: `rotate(${rot}deg)`,
+  backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.18), rgba(0,0,0,0.04))',
+})
+const pointsBadge: React.CSSProperties = {
+  fontFamily: hand,
+  fontSize: 18,
+  color: S.coral,
+  marginTop: 2,
 }
-const sectionTitle: React.CSSProperties = {
-  fontSize: 14,
-  fontWeight: 700,
-  marginBottom: 12,
-  marginTop: 0,
-}
-const muted: React.CSSProperties = { color: '#94a3b8', fontSize: 14, margin: 0 }
 const addBtn: React.CSSProperties = {
-  padding: '5px 12px',
-  background: '#1a1a1a',
-  color: '#fff',
+  padding: '6px 14px',
+  background: S.ink,
+  color: S.paper,
   border: 'none',
-  borderRadius: 6,
+  borderRadius: 999,
   cursor: 'pointer',
+  fontFamily: body,
   fontSize: 13,
   fontWeight: 600,
 }

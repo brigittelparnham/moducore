@@ -4,6 +4,10 @@ import { useSpotify } from '../context'
 import { createSpotifyApi } from '../api'
 import type { SpotifyTrack } from '../types'
 
+const S = { ink: '#221a16', inkSoft: '#3b302a', coral: '#ff8a5b' }
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 type EraEntry = { decade: string; count: number }
 
 const DECADE_ORDER = ['pre-70s', '70s', '80s', '90s', '00s', '10s', '20s']
@@ -72,7 +76,6 @@ export function VibeBoard() {
       .range([h, 0])
       .nice()
 
-    // Bars
     svg.selectAll('rect')
       .data(eras)
       .join('rect')
@@ -81,10 +84,9 @@ export function VibeBoard() {
       .attr('width', x.bandwidth())
       .attr('height', (d) => h - y(d.count))
       .attr('rx', 3)
-      .attr('fill', '#1DB954')
-      .attr('opacity', (d) => 0.55 + (d.count / (d3.max(eras, (e) => e.count) ?? 1)) * 0.45)
+      .attr('fill', S.coral)
+      .attr('opacity', (d) => 0.4 + (d.count / (d3.max(eras, (e) => e.count) ?? 1)) * 0.6)
 
-    // Count labels on bars
     svg.selectAll('text.count')
       .data(eras)
       .join('text')
@@ -92,33 +94,34 @@ export function VibeBoard() {
       .attr('x', (d) => (x(d.decade) ?? 0) + x.bandwidth() / 2)
       .attr('y', (d) => y(d.count) - 4)
       .attr('text-anchor', 'middle')
-      .attr('font-size', 11)
-      .attr('fill', '#555')
+      .attr('font-size', 10)
+      .attr('fill', S.inkSoft)
+      .attr('opacity', 0.7)
       .text((d) => d.count)
 
-    // Y axis
     svg.append('g')
       .call(d3.axisLeft(y).ticks(3).tickSize(-w))
       .call((g) => g.select('.domain').remove())
-      .call((g) => g.selectAll('.tick line').attr('stroke', '#f0f0f0'))
-      .call((g) => g.selectAll('.tick text').attr('font-size', 10).attr('fill', '#aaa'))
+      .call((g) => g.selectAll('.tick line').attr('stroke', 'rgba(34,26,22,0.08)'))
+      .call((g) => g.selectAll('.tick text').attr('font-size', 9).attr('fill', S.inkSoft).attr('opacity', 0.5))
 
-    // X axis
     svg.append('g')
       .attr('transform', `translate(0,${h})`)
       .call(d3.axisBottom(x).tickSize(0))
       .call((g) => g.select('.domain').remove())
-      .call((g) => g.selectAll('.tick text').attr('font-size', 12).attr('fill', '#555').attr('dy', '1.2em'))
+      .call((g) => g.selectAll('.tick text').attr('font-size', 11).attr('fill', S.inkSoft).attr('opacity', 0.65).attr('dy', '1.2em'))
   }, [eras])
 
   return (
     <div style={card}>
-      <h3 style={heading}>Music Eras</h3>
-      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#999' }}>Decades in your all-time top tracks</p>
+      <div style={{ fontFamily: hand, fontSize: 24, color: S.ink, marginBottom: 2 }}>music eras</div>
+      <p style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.15em', color: S.inkSoft, opacity: 0.5, margin: '0 0 12px', textTransform: 'uppercase' as const }}>
+        decades in your all-time top tracks
+      </p>
       {isLoading ? (
-        <p style={muted}>Loading…</p>
+        <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.5, margin: 0 }}>loading…</p>
       ) : eras.length === 0 ? (
-        <p style={muted}>No track data yet.</p>
+        <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no track data yet.</p>
       ) : (
         <div style={{ overflowX: 'hidden' }}>
           <svg ref={svgRef} style={{ display: 'block' }} />
@@ -129,13 +132,11 @@ export function VibeBoard() {
 }
 
 const card: React.CSSProperties = {
-  background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: 10,
+  background: '#fffdf8',
+  border: `1.5px solid rgba(34,26,22,0.1)`,
+  borderRadius: 3,
   padding: 20,
   flex: 1,
   minWidth: 0,
+  boxShadow: '2px 3px 0 rgba(34,26,22,0.06)',
 }
-
-const heading: React.CSSProperties = { margin: '0 0 4px', fontSize: 16, fontWeight: 700 }
-const muted: React.CSSProperties = { color: '#888', fontSize: 14, margin: 0 }

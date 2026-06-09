@@ -4,6 +4,10 @@ import { createMapsApi } from '../api'
 import { JourneyCard } from './JourneyCard'
 import type { Journey } from '../types'
 
+const S = { ink: '#221a16', inkSoft: '#3b302a' }
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 export function JourneyList() {
   const { apiBase } = useMaps()
   const api = createMapsApi(apiBase)
@@ -36,15 +40,16 @@ export function JourneyList() {
     })
   }
 
-  // Group by date
   const grouped = groupByDate(journeys)
 
   return (
     <div>
       {isLoading ? (
-        <p style={muted}>Loading journeys…</p>
+        <p style={{ fontFamily: hand, fontSize: 22, color: S.inkSoft, opacity: 0.5 }}>loading journeys…</p>
       ) : journeys.length === 0 ? (
-        <p style={muted}>No journeys detected yet. Make sure OwnTracks is configured and sending pings.</p>
+        <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.6 }}>
+          no journeys detected yet. make sure OwnTracks is configured and sending pings.
+        </p>
       ) : (
         <>
           {Object.entries(grouped).map(([date, items]) => (
@@ -56,7 +61,7 @@ export function JourneyList() {
             </div>
           ))}
           {hasMore && (
-            <button onClick={loadMore} style={loadMoreBtn}>Load more</button>
+            <button onClick={loadMore} style={loadMoreBtn}>load more ↓</button>
           )}
         </>
       )}
@@ -73,8 +78,8 @@ function groupByDate(journeys: Journey[]): Record<string, Journey[]> {
     yesterday.setDate(today.getDate() - 1)
 
     let label: string
-    if (d.toDateString() === today.toDateString()) label = 'Today'
-    else if (d.toDateString() === yesterday.toDateString()) label = 'Yesterday'
+    if (d.toDateString() === today.toDateString()) label = 'today'
+    else if (d.toDateString() === yesterday.toDateString()) label = 'yesterday'
     else label = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
     groups[label] = groups[label] ?? []
@@ -83,21 +88,23 @@ function groupByDate(journeys: Journey[]): Record<string, Journey[]> {
   return groups
 }
 
-const muted: React.CSSProperties = { color: '#888', fontSize: 14 }
 const dateHeader: React.CSSProperties = {
-  fontSize: 12,
-  fontWeight: 700,
+  fontFamily: mono,
+  fontSize: 10,
+  letterSpacing: '0.2em',
   textTransform: 'uppercase',
-  letterSpacing: 1,
-  color: '#aaa',
+  color: '#3b302a',
+  opacity: 0.55,
   marginBottom: 8,
 }
 const loadMoreBtn: React.CSSProperties = {
-  padding: '8px 16px',
+  padding: '9px 20px',
+  fontFamily: "'Space Grotesk', sans-serif",
   fontSize: 13,
-  border: '1px solid #e5e7eb',
-  borderRadius: 6,
-  background: '#fff',
+  border: `1.5px solid rgba(34,26,22,0.2)`,
+  borderRadius: 999,
+  background: 'transparent',
+  color: '#221a16',
   cursor: 'pointer',
   display: 'block',
   margin: '0 auto',

@@ -99,6 +99,18 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@18.3.1)
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -145,6 +157,18 @@ importers:
 
   apps/habits:
     dependencies:
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -182,6 +206,18 @@ importers:
 
   apps/home:
     dependencies:
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       react:
         specifier: ^18.3.0
         version: 18.3.1
@@ -207,6 +243,18 @@ importers:
 
   apps/journal:
     dependencies:
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -247,6 +295,18 @@ importers:
 
   apps/maps:
     dependencies:
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -284,6 +344,18 @@ importers:
 
   apps/spotify:
     dependencies:
+      '@fontsource/caveat':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/instrument-sans':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@fontsource/space-grotesk':
+        specifier: ^5.1.0
+        version: 5.2.10
       '@moducore/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -1752,6 +1824,22 @@ packages:
       '@eslint/core': 0.17.0
       levn: 0.4.1
     dev: true
+
+  /@fontsource/caveat@5.2.8:
+    resolution: {integrity: sha512-9fUUfFE2IQFKbx+xOcaeQxxmh8iJguEb8z+j1PeueO4UUx+XfT4pRm/B04ZDvFA794/iRxY/IibmP8ZKtIf4rw==}
+    dev: false
+
+  /@fontsource/instrument-sans@5.2.8:
+    resolution: {integrity: sha512-TJRYVbjZPx4DGMMU5lb5eFKrP3iLe9h7rz8Pk+dP958IZKiyHjYGXXwQZapVbBXcQN+YOiviVhAWxrjv8g6Z6g==}
+    dev: false
+
+  /@fontsource/jetbrains-mono@5.2.8:
+    resolution: {integrity: sha512-6w8/SG4kqvIMu7xd7wt6x3idn1Qux3p9N62s6G3rfldOUYHpWcc2FKrqf+Vo44jRvqWj2oAtTHrZXEP23oSKwQ==}
+    dev: false
+
+  /@fontsource/space-grotesk@5.2.10:
+    resolution: {integrity: sha512-XNXEbT74OIITPqw2H6HXwPDp85fy43uxfBwFR5PU+9sLnjuLj12KlhVM9nZVN6q6dlKjkuN8JisW/OBxwxgUew==}
+    dev: false
 
   /@hono/node-server@1.19.11(hono@4.12.5):
     resolution: {integrity: sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==}

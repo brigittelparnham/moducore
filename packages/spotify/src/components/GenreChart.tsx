@@ -4,6 +4,10 @@ import { useSpotify } from '../context'
 import { createSpotifyApi } from '../api'
 import type { SpotifyRecentlyPlayedItem } from '../types'
 
+const S = { ink: '#221a16', inkSoft: '#3b302a', sky: '#9aa8ff' }
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 type HourEntry = { hour: number; count: number; label: string }
 
 const HOUR_LABELS: string[] = [
@@ -66,7 +70,6 @@ export function GenreChart() {
       .range([h, 0])
       .nice()
 
-    // Bars
     svg.selectAll('rect')
       .data(hours)
       .join('rect')
@@ -75,17 +78,15 @@ export function GenreChart() {
       .attr('width', x.bandwidth())
       .attr('height', (d) => h - y(d.count))
       .attr('rx', 2)
-      .attr('fill', '#1DB954')
-      .attr('opacity', (d) => d.count === 0 ? 0.15 : 0.75 + (d.count / (d3.max(hours, (e) => e.count) ?? 1)) * 0.25)
+      .attr('fill', S.sky)
+      .attr('opacity', (d) => d.count === 0 ? 0.12 : 0.6 + (d.count / (d3.max(hours, (e) => e.count) ?? 1)) * 0.4)
 
-    // Y axis (just 2 ticks)
     svg.append('g')
       .call(d3.axisLeft(y).ticks(3).tickSize(-w))
       .call((g) => g.select('.domain').remove())
-      .call((g) => g.selectAll('.tick line').attr('stroke', '#f0f0f0'))
-      .call((g) => g.selectAll('.tick text').attr('font-size', 10).attr('fill', '#aaa'))
+      .call((g) => g.selectAll('.tick line').attr('stroke', 'rgba(34,26,22,0.08)'))
+      .call((g) => g.selectAll('.tick text').attr('font-size', 9).attr('fill', S.inkSoft).attr('opacity', 0.5))
 
-    // X axis — only label every 6 hours
     const xAxisHours = [0, 6, 12, 18]
     svg.append('g')
       .attr('transform', `translate(0,${h})`)
@@ -96,19 +97,21 @@ export function GenreChart() {
           .tickSize(0)
       )
       .call((g) => g.select('.domain').remove())
-      .call((g) => g.selectAll('.tick text').attr('font-size', 11).attr('fill', '#888').attr('dy', '1.2em'))
+      .call((g) => g.selectAll('.tick text').attr('font-size', 9).attr('fill', S.inkSoft).attr('opacity', 0.5).attr('dy', '1.2em'))
   }, [hours])
 
   const hasData = hours.some((h) => h.count > 0)
 
   return (
     <div style={card}>
-      <h3 style={heading}>Listening Hours</h3>
-      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#999' }}>When you play music (last 50 plays)</p>
+      <div style={{ fontFamily: hand, fontSize: 24, color: S.ink, marginBottom: 2 }}>listening hours</div>
+      <p style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.15em', color: S.inkSoft, opacity: 0.5, margin: '0 0 12px', textTransform: 'uppercase' as const }}>
+        when you play music · last 50 plays
+      </p>
       {isLoading ? (
-        <p style={muted}>Loading…</p>
+        <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.5, margin: 0 }}>loading…</p>
       ) : !hasData ? (
-        <p style={muted}>No listening history yet.</p>
+        <p style={{ fontFamily: hand, fontSize: 20, color: S.inkSoft, opacity: 0.6, margin: 0 }}>no listening history yet.</p>
       ) : (
         <div style={{ overflowX: 'hidden' }}>
           <svg ref={svgRef} style={{ display: 'block' }} />
@@ -119,13 +122,11 @@ export function GenreChart() {
 }
 
 const card: React.CSSProperties = {
-  background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: 10,
+  background: '#fffdf8',
+  border: `1.5px solid rgba(34,26,22,0.1)`,
+  borderRadius: 3,
   padding: 20,
   flex: 1,
   minWidth: 0,
+  boxShadow: '2px 3px 0 rgba(34,26,22,0.06)',
 }
-
-const heading: React.CSSProperties = { margin: '0 0 4px', fontSize: 16, fontWeight: 700 }
-const muted: React.CSSProperties = { color: '#888', fontSize: 14, margin: 0 }

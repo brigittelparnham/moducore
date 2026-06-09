@@ -105,6 +105,7 @@ export function createHabitsApi(apiBase: string) {
         post('/finance/categories', data),
       update: (id: string, data: Partial<Category>): Promise<{ category: Category }> =>
         patch(`/finance/categories/${id}`, data),
+      delete: (id: string) => del(`/finance/categories/${id}`),
     },
     budget: {
       get: (period: 'weekly' | 'monthly' | 'yearly' = 'monthly'): Promise<{ budget: BudgetLine[]; period: string; from: string; to: string }> =>

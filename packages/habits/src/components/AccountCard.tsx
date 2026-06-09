@@ -14,27 +14,43 @@ const TYPE_ICONS: Record<string, string> = {
   investment: '📈',
 }
 
+const S = {
+  paper: '#efe6d4',
+  paperD: '#e2d6bd',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  lemon: '#ffd86b',
+  sky: '#9aa8ff',
+  rose: '#ff9bb8',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 export function AccountCard({ account, balance, onClick }: Props) {
   const icon = TYPE_ICONS[account.type] ?? '🏦'
-  const color = account.color ?? '#6366f1'
 
   return (
-    <div style={card(color, !!onClick)} onClick={onClick}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={iconBox(color)}>{icon}</div>
+    <div style={card(!!onClick)} onClick={onClick}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={iconBox}>{icon}</div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{account.name}</div>
-          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, textTransform: 'capitalize' }}>
+          <div style={{ fontFamily: hand, fontSize: 24, lineHeight: 1.1, color: S.ink }}>{account.name}</div>
+          <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.15em', color: S.inkSoft, marginTop: 2, textTransform: 'uppercase' as const, opacity: 0.65 }}>
             {account.type}{account.provider === 'starling' ? ' · Starling' : ''}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 800, fontSize: 20, color: balance < 0 ? '#ef4444' : '#1a1a1a' }}>
+          <div style={{ fontFamily: hand, fontSize: 36, lineHeight: 1, color: balance < 0 ? S.coral : S.ink }}>
             £{Math.abs(balance).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          {balance < 0 && <div style={{ fontSize: 11, color: '#ef4444' }}>overdrawn</div>}
+          {balance < 0 && (
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', color: S.coral, marginTop: 2 }}>OVERDRAWN</div>
+          )}
           {account.starlingLastSyncedAt && (
-            <div style={{ fontSize: 10, color: '#94a3b8' }}>
+            <div style={{ fontFamily: mono, fontSize: 10, color: S.inkSoft, opacity: 0.5, marginTop: 2 }}>
               synced {formatAgo(account.starlingLastSyncedAt)}
             </div>
           )}
@@ -52,22 +68,23 @@ function formatAgo(iso: string) {
   return `${Math.floor(mins / 60)}h ago`
 }
 
-const card = (color: string, clickable: boolean): React.CSSProperties => ({
+const card = (clickable: boolean): React.CSSProperties => ({
   background: '#fff',
-  border: `1px solid #e5e7eb`,
-  borderLeft: `4px solid ${color}`,
-  borderRadius: 10,
+  boxShadow: '0 8px 18px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06)',
+  borderRadius: 4,
   padding: '14px 16px',
   cursor: clickable ? 'pointer' : 'default',
+  fontFamily: body,
+  marginBottom: 10,
 })
-const iconBox = (color: string): React.CSSProperties => ({
-  width: 36,
-  height: 36,
-  borderRadius: 8,
-  background: color + '22',
+const iconBox: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 4,
+  background: S.paperD,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: 18,
+  fontSize: 20,
   flexShrink: 0,
-})
+}

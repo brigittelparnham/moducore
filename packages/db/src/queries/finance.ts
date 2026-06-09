@@ -93,6 +93,12 @@ export async function updateCategory(
   return category
 }
 
+export async function deleteCategory(db: DB, tenantId: string, id: string) {
+  await db
+    .delete(categories)
+    .where(and(eq(categories.id, id), eq(categories.tenantId, tenantId), eq(categories.isSystem, false)))
+}
+
 /** Seed default categories for a new tenant */
 export async function seedDefaultCategories(db: DB, tenantId: string) {
   const defaults = [

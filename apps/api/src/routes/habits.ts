@@ -87,43 +87,6 @@ habitsRoutes.post(
   }
 )
 
-habitsRoutes.get('/:id', requireAuth, async (c) => {
-  const db = getDb()
-  const tenant = c.get('tenant')!
-  const habit = await getHabit(db, tenant.id, c.req.param('id'))
-  if (!habit) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
-  return c.json({ habit })
-})
-
-habitsRoutes.patch(
-  '/:id',
-  requireAuth,
-  zValidator('json', z.object({
-    name: z.string().min(1).optional(),
-    icon: z.string().optional(),
-    color: z.string().optional(),
-    unit: z.string().optional(),
-    unitLabel: z.string().optional(),
-    type: z.enum(['habit', 'limit']).optional(),
-    pointsPerLog: z.string().optional(),
-    notes: z.string().optional(),
-    archived: z.boolean().optional(),
-  })),
-  async (c) => {
-    const db = getDb()
-    const tenant = c.get('tenant')!
-    const habit = await updateHabit(db, tenant.id, c.req.param('id'), c.req.valid('json'))
-    return c.json({ habit })
-  }
-)
-
-habitsRoutes.delete('/:id', requireAuth, async (c) => {
-  const db = getDb()
-  const tenant = c.get('tenant')!
-  await deleteHabit(db, tenant.id, c.req.param('id'))
-  return c.json({ ok: true })
-})
-
 // ─── Targets ─────────────────────────────────────────────────────────────────
 
 habitsRoutes.put(
@@ -294,4 +257,43 @@ habitsRoutes.get('/points', requireAuth, async (c) => {
     getPointsLedger(db, tenant.id, 30),
   ])
   return c.json({ total, ledger })
+})
+
+// ─── Habits by ID (must be after all named sub-routes to avoid shadowing) ─────
+
+habitsRoutes.get('/:id', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  const habit = await getHabit(db, tenant.id, c.req.param('id'))
+  if (!habit) return c.json(apiError("NOT_FOUND", 'Not found'), 404)
+  return c.json({ habit })
+})
+
+habitsRoutes.patch(
+  '/:id',
+  requireAuth,
+  zValidator('json', z.object({
+    name: z.string().min(1).optional(),
+    icon: z.string().optional(),
+    color: z.string().optional(),
+    unit: z.string().optional(),
+    unitLabel: z.string().optional(),
+    type: z.enum(['habit', 'limit']).optional(),
+    pointsPerLog: z.string().optional(),
+    notes: z.string().optional(),
+    archived: z.boolean().optional(),
+  })),
+  async (c) => {
+    const db = getDb()
+    const tenant = c.get('tenant')!
+    const habit = await updateHabit(db, tenant.id, c.req.param('id'), c.req.valid('json'))
+    return c.json({ habit })
+  }
+)
+
+habitsRoutes.delete('/:id', requireAuth, async (c) => {
+  const db = getDb()
+  const tenant = c.get('tenant')!
+  await deleteHabit(db, tenant.id, c.req.param('id'))
+  return c.json({ ok: true })
 })

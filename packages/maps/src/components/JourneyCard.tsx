@@ -1,6 +1,18 @@
 import type { Journey } from '../types'
 import { MapView } from './MapView'
 
+const S = {
+  paper: '#efe6d4',
+  ink: '#221a16',
+  inkSoft: '#3b302a',
+  coral: '#ff8a5b',
+  mint: '#7fd1b9',
+  sky: '#9aa8ff',
+}
+const body = "'Space Grotesk', 'Instrument Sans', sans-serif"
+const hand = "'Caveat', 'Patrick Hand', cursive"
+const mono = "'JetBrains Mono', monospace"
+
 const MODE_ICON: Record<string, string> = {
   walking: '🚶',
   cycling: '🚲',
@@ -43,28 +55,28 @@ export function JourneyCard({ journey, compact = false, showMap = false }: Props
             destLat={journey.destLat}
             destLon={journey.destLon}
             height={140}
-            borderRadius={6}
+            borderRadius={2}
           />
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 24, flexShrink: 0 }}>{icon}</span>
+        <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontFamily: hand, fontSize: 20, color: S.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {from} → {to}
           </div>
           {!compact && (
-            <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+            <div style={{ fontFamily: mono, fontSize: 10, letterSpacing: '0.12em', color: S.inkSoft, opacity: 0.6, marginTop: 2 }}>
               {formatTime(journey.startedAt)} — {formatTime(journey.endedAt)}
               {' · '}{formatDistance(journey.distanceM)}
             </div>
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>{formatDuration(journey.durationS)}</div>
+          <div style={{ fontFamily: hand, fontSize: 26, color: S.ink, lineHeight: 1 }}>{formatDuration(journey.durationS)}</div>
           {diff !== null && (
-            <div style={{ fontSize: 11, color: diff > 2 ? '#ef4444' : diff < -2 ? '#16a34a' : '#888' }}>
-              {diff > 0 ? `+${diff}` : diff} min vs TfL
+            <div style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.1em', color: diff > 2 ? S.coral : diff < -2 ? S.mint : S.inkSoft, opacity: 0.8 }}>
+              {diff > 0 ? `+${diff}` : diff} vs TfL
             </div>
           )}
         </div>
@@ -74,8 +86,9 @@ export function JourneyCard({ journey, compact = false, showMap = false }: Props
 }
 
 const card: React.CSSProperties = {
-  background: '#f9fafb',
-  border: '1px solid #e5e7eb',
-  borderRadius: 8,
+  background: '#fffdf8',
+  border: `1.5px solid rgba(34,26,22,0.1)`,
+  borderRadius: 3,
   padding: '12px 14px',
+  boxShadow: '1px 2px 0 rgba(34,26,22,0.05)',
 }

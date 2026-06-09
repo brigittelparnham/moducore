@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "react": "^18.3.0",
+    "@fontsource/space-grotesk": "^5.1.0",
+    "@fontsource/caveat": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "@fontsource/instrument-sans": "^5.1.0",
     "react-dom": "^18.3.0"
   },
   "devDependencies": {
