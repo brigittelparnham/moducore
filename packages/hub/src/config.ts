@@ -42,3 +42,18 @@ export function getCurrentAppSlug(): AppSlug | null {
   const apps = getHubConfig()
   return apps.find((a) => a.url === origin || a.url.replace(/\/$/, '') === origin)?.slug ?? null
 }
+
+const SEED_KEY = 'moducore_design_seed'
+
+export function getDesignSeed(): number | null {
+  try {
+    const v = localStorage.getItem(SEED_KEY)
+    return v !== null ? Number(v) : null
+  } catch {
+    return null
+  }
+}
+
+export function setDesignSeed(seed: number) {
+  localStorage.setItem(SEED_KEY, String(seed))
+}

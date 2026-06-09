@@ -2,6 +2,8 @@
 
 Build order is intentional: infrastructure before features, each phase unlocks the next.
 
+> See also: [Design System](design-system.md) — Studio palette, typography, components, StickerMark, and the 9-screen spec status.
+
 ---
 
 ## Phase 1 — Monorepo Scaffold

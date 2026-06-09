@@ -45,7 +45,7 @@ export function SignupPage() {
     try {
       await api.auth.signup(form)
       await refresh()
-      navigate('/')
+      navigate('/onboarding')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {

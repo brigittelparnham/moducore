@@ -19,6 +19,7 @@ import { SpotifyFeedPage } from './pages/SpotifyFeedPage'
 import { MapsFeedPage } from './pages/MapsFeedPage'
 import { LifestyleFeedPage } from './pages/LifestyleFeedPage'
 import { MediaPage } from './pages/MediaPage'
+import { OnboardingPage } from './pages/OnboardingPage'
 
 export function App() {
   return (
@@ -29,6 +30,7 @@ export function App() {
           {/* ── Public routes ── */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/p/:tenantSlug/:slug" element={<PublicPageView />} />
